@@ -1,19 +1,21 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
-  AlertButton,
   Dimensions,
+  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
-import { Transaction, ChartData, SelectOption } from '../../types/transaction';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PieChart } from 'react-native-chart-kit';
+import { CategoryManager } from '../../components/category-manager';
+import { Category, DEFAULT_CATEGORIES } from '../../types/category';
+import { ChartData, Transaction } from '../../types/transaction';
 
 // --- Configurações e Constantes ---
 
@@ -30,26 +32,13 @@ const COLORS = {
   containerBg: '#2c2c2c',
   text: '#e0e0e0',
   background: '#1a1a1a',
-  saude: '#e74c3c',
-  lazer: '#2ecc71',
-  alimentacao: '#3498db',
-  transporte: '#f1c40f',
-  outros: '#95a5a5',
   placeholder: '#999',
   border: '#444',
 };
 
-const CATEGORIES = [
-  { value: 'saude', label: 'Saúde', color: COLORS.saude },
-  { value: 'lazer', label: 'Lazer', color: COLORS.lazer },
-  { value: 'alimentacao', label: 'Alimentação', color: COLORS.alimentacao },
-  { value: 'transporte', label: 'Transporte', color: COLORS.transporte },
-  { value: 'outros', label: 'Outros (Especifique abaixo)', color: COLORS.outros },
-];
-
-const TIPOS = [
-    { value: 'entrada', label: 'Entrada' },
-    { value: 'saida', label: 'Saída' }
+const TIPOS: Category[] = [
+    { value: 'entrada', label: 'Entrada', color: COLORS.primary },
+    { value: 'saida', label: 'Saída', color: COLORS.error }
 ];
 
 // --- Funções Auxiliares ---
@@ -64,10 +53,10 @@ const getCurrentDate = () => {
   return new Date().toISOString().split('T')[0];
 };
 
-const formatCategoryDisplayName = (categoryValue: string): string => {
-  const predefinedCategory = CATEGORIES.find(c => c.value === categoryValue);
-  if (predefinedCategory) {
-      return predefinedCategory.label.replace(' (Especifique abaixo)', '');
+const formatCategoryDisplayName = (categoryValue: string, categoriesList: Category[]): string => {
+  const category = categoriesList.find(c => c.value === categoryValue);
+  if (category) {
+      return category.label;
   }
   return categoryValue
     .split('-')
@@ -75,12 +64,12 @@ const formatCategoryDisplayName = (categoryValue: string): string => {
     .join(' ');
 };
 
-const getCategoryColor = (categoryValue: string): string => {
-    const predefinedCategory = CATEGORIES.find(c => c.value === categoryValue);
-    return predefinedCategory ? predefinedCategory.color : COLORS.outros;
+const getCategoryColor = (categoryValue: string, categoriesList: Category[]): string => {
+    const category = categoriesList.find(c => c.value === categoryValue);
+    return category ? category.color : DEFAULT_CATEGORIES[DEFAULT_CATEGORIES.length - 1].color;
 };
 
-const calculateCategoryTotals = (transactions: Transaction[]): ChartData[] => {
+const calculateCategoryTotals = (transactions: Transaction[], categoriesList: Category[]): ChartData[] => {
     const outputTransactions = transactions.filter(t => t.tipo === 'saida');
     
     const totals = outputTransactions.reduce<Record<string, number>>((acc, t) => {
@@ -91,12 +80,12 @@ const calculateCategoryTotals = (transactions: Transaction[]): ChartData[] => {
 
     return Object.keys(totals).map(categoryValue => {
         const totalValue = totals[categoryValue];
-        const displayName = formatCategoryDisplayName(categoryValue);
+        const displayName = formatCategoryDisplayName(categoryValue, categoriesList);
         
         return {
             name: displayName,
             population: parseFloat(totalValue.toFixed(2)),
-            color: getCategoryColor(categoryValue),
+            color: getCategoryColor(categoryValue, categoriesList),
             legendFontColor: COLORS.text,
             legendFontSize: 12,
         };
@@ -107,59 +96,102 @@ const calculateCategoryTotals = (transactions: Transaction[]): ChartData[] => {
 
 interface SelectInputProps {
   placeholder: string;
-  options: SelectOption[];
+  options: Category[];
   selectedValue: string;
   onValueChange: (value: string) => void;
   disabled?: boolean;
 }
 
 const SelectInput = ({ placeholder, options, selectedValue, onValueChange, disabled = false }: SelectInputProps) => {
-  const handlePress = () => {
-    if (disabled) return;
-
-    const alertButtons: AlertButton[] = [
-        ...options.map((opt) => ({
-            text: opt.label,
-            onPress: () => onValueChange(opt.value),
-            style: 'default',
-        })),
-        { text: 'Cancelar', style: 'cancel' }
-    ];
-
-    Alert.alert(
-        placeholder,
-        'Selecione uma opção',
-        alertButtons
-    );
-  };
-
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  
   const displayOption = options.find(opt => opt.value === selectedValue);
   const displayValue = displayOption ? displayOption.label : placeholder;
 
   return (
-    <TouchableOpacity 
-      onPress={handlePress} 
-      style={[styles.selectContainer, disabled && styles.inputDisabled]} 
-      activeOpacity={disabled ? 1 : 0.7}
-    >
-      <Text style={[styles.selectText, !displayOption && { color: COLORS.placeholder }]}>
-        {displayValue}
-      </Text>
-    </TouchableOpacity>
+    <>
+      <TouchableOpacity 
+        onPress={() => !disabled && setIsModalVisible(true)} 
+        style={[styles.selectContainer, disabled && styles.inputDisabled]} 
+        activeOpacity={disabled ? 1 : 0.7}
+      >
+        <Text style={[styles.selectText, !displayOption && { color: COLORS.placeholder }]}>
+          {displayValue}
+        </Text>
+      </TouchableOpacity>
+
+      <Modal
+        visible={isModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1} 
+          onPress={() => setIsModalVisible(false)}
+        >
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+            <Text style={styles.modalTitle}>{placeholder}</Text>
+            <ScrollView style={styles.optionsList}>
+              {options.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.optionItem,
+                    option.value === selectedValue && {
+                      backgroundColor: option.color || COLORS.primary
+                    }
+                  ]}
+                  onPress={() => {
+                    onValueChange(option.value);
+                    setIsModalVisible(false);
+                  }}
+                >
+                  {option.color && (
+                    <View 
+                      style={[
+                        styles.optionColor, 
+                        { backgroundColor: option.color }
+                      ]} 
+                    />
+                  )}
+                  <Text 
+                    style={[
+                      styles.optionText,
+                      option.value === selectedValue && styles.optionTextSelected
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity 
+              style={styles.modalCancelButton}
+              onPress={() => setIsModalVisible(false)}
+            >
+              <Text style={styles.modalCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
   );
 };
 
 interface TransactionItemProps {
   transaction: Transaction;
   onDelete: () => void;
+  categories: Category[];
 }
 
-const TransactionItem = ({ transaction, onDelete }: TransactionItemProps) => {
+const TransactionItem = ({ transaction, onDelete, categories }: TransactionItemProps) => {
   const typeStyle = transaction.tipo === 'entrada' ? styles.entrada : styles.saida;
   
   let categoryLabel = '';
   if (transaction.tipo === 'saida' && transaction.categoria) {
-      categoryLabel = formatCategoryDisplayName(transaction.categoria);
+      categoryLabel = formatCategoryDisplayName(transaction.categoria, categories);
   }
 
   return (
@@ -184,19 +216,29 @@ export default function FinanceApp() {
   const [tipo, setTipo] = useState<'entrada' | 'saida'>('entrada');
   const [categoria, setCategoria] = useState('');
   const [customCategoryText, setCustomCategoryText] = useState('');
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [isCategoryManagerVisible, setIsCategoryManagerVisible] = useState(false);
 
   useEffect(() => {
-    const loadTransactions = async () => {
+    const loadData = async () => {
       try {
+        // Carregar transações
         const storedTransactions = await AsyncStorage.getItem('transactions');
         if (storedTransactions) {
           setTransactions(JSON.parse(storedTransactions));
         }
+
+        // Carregar categorias personalizadas
+        const storedCategories = await AsyncStorage.getItem('@MyFinances:customCategories');
+        if (storedCategories) {
+          const customCategories = JSON.parse(storedCategories) as Category[];
+          setCategories([...DEFAULT_CATEGORIES.slice(0, -1), ...customCategories, DEFAULT_CATEGORIES[DEFAULT_CATEGORIES.length - 1]]);
+        }
       } catch (e) {
-        console.error('Failed to load transactions.', e);
+        console.error('Failed to load data:', e);
       }
     };
-    loadTransactions();
+    loadData();
   }, []);
 
   const saveTransactions = useCallback(async (newTransactions: Transaction[]) => {
@@ -214,8 +256,8 @@ export default function FinanceApp() {
       0
     );
     setTotal(newTotal);
-    setChartData(calculateCategoryTotals(transactions));
-  }, [transactions]);
+    setChartData(calculateCategoryTotals(transactions, categories));
+  }, [transactions, categories]);
   
   useEffect(() => {
     if (tipo === 'entrada') {
@@ -351,9 +393,16 @@ export default function FinanceApp() {
             placeholder="Categoria (apenas para saídas)"
             disabled={isCategoryDisabled}
             selectedValue={categoria}
-            options={CATEGORIES}
+            options={categories}
             onValueChange={setCategoria}
           />
+          
+          <TouchableOpacity 
+            style={[styles.buttonOutline, { marginBottom: 12 }]}
+            onPress={() => setIsCategoryManagerVisible(true)}
+          >
+            <Text style={styles.buttonOutlineText}>Gerenciar Categorias</Text>
+          </TouchableOpacity>
           
           {showCustomCategoryInput && (
             <TextInput
@@ -377,6 +426,7 @@ export default function FinanceApp() {
               <TransactionItem
                 key={t.id}
                 transaction={t}
+                categories={categories}
                 onDelete={() => handleDeleteTransaction(t.id)}
               />
             ))
@@ -413,6 +463,13 @@ export default function FinanceApp() {
           <Text style={styles.buttonText}>GERAR RELATÓRIO</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <CategoryManager
+        isVisible={isCategoryManagerVisible}
+        onClose={() => setIsCategoryManagerVisible(false)}
+        onCategoriesUpdate={setCategories}
+        currentCategories={categories}
+      />
     </SafeAreaView>
   );
 }
@@ -421,6 +478,80 @@ const styles = StyleSheet.create({
   fillScreen: { 
     flex: 1, 
     backgroundColor: COLORS.background, 
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    maxWidth: 400,
+    backgroundColor: COLORS.containerBg,
+    borderRadius: 12,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  optionsList: {
+    maxHeight: 300,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderRadius: 8,
+    marginVertical: 4,
+    backgroundColor: COLORS.listBg,
+  },
+  optionColor: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  optionItemSelected: {
+    backgroundColor: COLORS.primary,
+  },
+  optionText: {
+    color: COLORS.text,
+    fontSize: 16,
+  },
+  optionTextSelected: {
+    color: '#FFF',
+    fontWeight: 'bold',
+  },
+  modalCancelButton: {
+    marginTop: 15,
+    padding: 15,
+    borderRadius: 8,
+    backgroundColor: COLORS.error,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  buttonOutline: {
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonOutlineText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   container: { 
     padding: 25, 
