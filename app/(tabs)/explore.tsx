@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { PieChart } from 'react-native-chart-kit';
 import { CategoryManager } from '../../components/category-manager';
+import { FinancialReport } from '../../components/financial-report';
 import { Category, DEFAULT_CATEGORIES } from '../../types/category';
 import { ChartData, Transaction } from '../../types/transaction';
 
@@ -317,11 +318,43 @@ export default function FinanceApp() {
     saveTransactions(newTransactions);
   };
   
+  const [isReportVisible, setIsReportVisible] = useState(false);
+  const [previousMonthTransactions, setPreviousMonthTransactions] = useState<Transaction[]>([]);
+
+  // Carrega transações do mês anterior para comparação
+  useEffect(() => {
+    const loadPreviousTransactions = async () => {
+      try {
+        const storedTransactions = await AsyncStorage.getItem('previousTransactions');
+        if (storedTransactions) {
+          setPreviousMonthTransactions(JSON.parse(storedTransactions));
+        }
+      } catch (e) {
+        console.error('Failed to load previous transactions:', e);
+      }
+    };
+    loadPreviousTransactions();
+  }, []);
+
+  // Atualiza transações do mês anterior quando necessário
+  useEffect(() => {
+    const currentDate = new Date();
+    const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    
+    // Filtra transações do mês anterior
+    const previousTransactions = transactions.filter(t => {
+      const transactionDate = new Date(t.data);
+      return transactionDate < firstDayOfMonth;
+    });
+
+    if (previousTransactions.length > 0) {
+      AsyncStorage.setItem('previousTransactions', JSON.stringify(previousTransactions))
+        .catch(e => console.error('Failed to save previous transactions:', e));
+    }
+  }, [transactions]);
+
   const handleGenerateReport = () => {
-    Alert.alert(
-      'Gerar Relatório',
-      'Funcionalidade de PDF não implementada (requer bibliotecas nativas como react-native-html-to-pdf).'
-    );
+    setIsReportVisible(true);
   };
   
   const ChartLegend = () => (
@@ -469,6 +502,14 @@ export default function FinanceApp() {
         onClose={() => setIsCategoryManagerVisible(false)}
         onCategoriesUpdate={setCategories}
         currentCategories={categories}
+      />
+
+      <FinancialReport
+        isVisible={isReportVisible}
+        onClose={() => setIsReportVisible(false)}
+        transactions={transactions}
+        categories={categories}
+        previousMonthTransactions={previousMonthTransactions}
       />
     </SafeAreaView>
   );
