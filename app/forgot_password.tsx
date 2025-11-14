@@ -107,7 +107,7 @@ export default function ForgotPasswordScreen() {
 
         {/* Voltar para Login */}
         <TouchableOpacity
-          onPress={() => router.push("/(tabs)")}
+          onPress={() => router.push("/")}
           style={styles.backButton}
         >
           <Text style={styles.backButtonText}>← Voltar para Login</Text>

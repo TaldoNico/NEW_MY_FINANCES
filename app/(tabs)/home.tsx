@@ -16,40 +16,15 @@ import {
 export default function Home() {
   const router = useRouter();
   const [viewMode, setViewMode] = useState("grid");
-  const [reports, setReports] = useState([
-    {
-      id: "1",
-      name: "Relatório Mensal",
-      color: "#FF6B6B",
-      progress: 65,
-      date: "Nov 2025",
-    },
-    {
-      id: "2",
-      name: "Gastos Pessoais",
-      color: "#4ECDC4",
-      progress: 42,
-      date: "Nov 2025",
-    },
-    {
-      id: "3",
-      name: "Receitas",
-      color: "#45B7D1",
-      progress: 88,
-      date: "Nov 2025",
-    },
-    {
-      id: "4",
-      name: "Investimentos",
-      color: "#96CEB4",
-      progress: 55,
-      date: "Nov 2025",
-    },
-  ]);
+  // Por padrão não mostrar relatórios (tela limpa). Se quiser ver exemplos, preencha essa lista.
+  const [reports, setReports] = useState([]);
   const [editModal, setEditModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#FF6B6B");
+  const [createModal, setCreateModal] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createColor, setCreateColor] = useState("#4ECDC4");
 
   const colors = [
     "#FF6B6B",
@@ -83,6 +58,27 @@ export default function Home() {
       )
     );
     setEditModal(false);
+  };
+
+  const saveCreate = () => {
+    const name = createName.trim() || "Seu Relatorio";
+    const id = Date.now().toString();
+    const date = new Date();
+    const month = date.toLocaleString("pt-BR", { month: "short" });
+    const year = date.getFullYear();
+    const report = {
+      id,
+      name,
+      color: createColor,
+      progress: 0,
+      date: `${month} ${year}`,
+    };
+    setReports((prev) => [report, ...prev]);
+    setCreateModal(false);
+    setCreateName("");
+    setCreateColor("#4ECDC4");
+    // Navigate to report screen after creating
+    router.push("/(tabs)/report");
   };
 
   const handleReportPress = (report) => {
@@ -166,20 +162,15 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Bem-vindo!</Text>
-          <Text style={styles.subtitle}>Seus Relatórios</Text>
-        </View>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={toggleView} style={styles.iconButton}>
-            <Ionicons
-              name={viewMode === "grid" ? "list" : "grid"}
-              size={24}
-              color="#fff"
-            />
-          </TouchableOpacity>
-        </View>
+      <View style={[styles.header, { marginTop: 50 }]}>
+        <Text style={styles.headerTitle}>Home</Text>
+        <TouchableOpacity onPress={toggleView} style={styles.iconButton}>
+          <Ionicons
+            name={viewMode === "grid" ? "list" : "grid"}
+            size={24}
+            color="#fff"
+          />
+        </TouchableOpacity>
       </View>
 
       {reports.length > 0 ? (
@@ -200,16 +191,14 @@ export default function Home() {
       ) : (
         <ScrollView contentContainerStyle={styles.emptyContainer}>
           <Ionicons name="document-outline" size={80} color="#666" />
-          <Text style={styles.emptyText}>Nenhum relatório criado</Text>
-          <Text style={styles.emptySubtext}>
-            Toque no + para criar seu primeiro relatório
-          </Text>
+          <Text style={styles.emptyText}>Infelizmente não há nenhum relátorio disponivel no momento...</Text>
+          <Text style={styles.emptySubtext}>Toque no + para criar um relatório</Text>
         </ScrollView>
       )}
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => router.push("/(tabs)/report")}
+        onPress={() => setCreateModal(true)}
       >
         <Ionicons name="add" size={32} color="#fff" />
       </TouchableOpacity>
@@ -262,6 +251,56 @@ export default function Home() {
           </View>
         </View>
       </Modal>
+
+      {/* Create Modal */}
+      <Modal visible={createModal} transparent animationType="fade">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Criar Relatório</Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Nome do relatório"
+              placeholderTextColor="#aaa"
+              value={createName}
+              onChangeText={setCreateName}
+            />
+
+            <Text style={styles.colorLabel}>Escolha uma cor:</Text>
+            <View style={styles.colorPalette}>
+              {colors.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  style={[
+                    styles.colorCircle,
+                    {
+                      backgroundColor: c,
+                      borderWidth: createColor === c ? 3 : 1,
+                      borderColor: createColor === c ? "#fff" : "#555",
+                    },
+                  ]}
+                  onPress={() => setCreateColor(c)}
+                />
+              ))}
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.btn, { backgroundColor: "#4ECDC4" }]}
+                onPress={saveCreate}
+              >
+                <Text style={styles.btnText}>Criar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.btn, { backgroundColor: "#666" }]}
+                onPress={() => setCreateModal(false)}
+              >
+                <Text style={styles.btnText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -278,7 +317,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 20,
     backgroundColor: "#1a1a1a",
-    marginTop: 10,
+    marginTop: 0,
   },
   greeting: {
     color: "#fff",
@@ -289,6 +328,12 @@ const styles = StyleSheet.create({
     color: "#888",
     fontSize: 14,
     marginTop: 4,
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
   },
   headerIcons: {
     flexDirection: "row",
@@ -412,12 +457,12 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: "absolute",
-    bottom: 80,
-    right: 20,
+    bottom: 12,
+    alignSelf: "center",
     backgroundColor: "#4ECDC4",
-    borderRadius: 50,
-    width: 60,
-    height: 60,
+    borderRadius: 34,
+    width: 68,
+    height: 68,
     justifyContent: "center",
     alignItems: "center",
     elevation: 8,

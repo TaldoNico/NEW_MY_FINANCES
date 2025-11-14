@@ -4,6 +4,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
+import CenterFab from '@/components/ui/center-fab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -37,6 +38,8 @@ export default function TabLayout() {
         options={{
           title: 'Relatórios',
           tabBarIcon: ({ color }) => <Ionicons name="bar-chart" size={28} color={color} />,
+          // show a custom centered FAB inside the tab bar
+          tabBarButton: (props) => <CenterFab {...props} />,
         }}
       />
       <Tabs.Screen

@@ -120,7 +120,7 @@ export default function RegisterScreen() {
         {/* Entrar */}
         <Text style={styles.registerText}>
           Já possui uma conta?
-          <TouchableOpacity onPress={() => router.push("/(tabs)")}>
+          <TouchableOpacity onPress={() => router.push("/")}>
             <Text style={styles.registerLink}> Entre aqui</Text>
           </TouchableOpacity>
         </Text>

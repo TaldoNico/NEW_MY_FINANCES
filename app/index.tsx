@@ -3,35 +3,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
-export default function ForgotPasswordScreen() {
+export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-
-  const handleResetPassword = () => {
-    if (!email || !newPassword || !confirmPassword) {
-      Alert.alert("Atenção", "Preencha todos os campos!");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      Alert.alert("Erro", "As senhas não coincidem!");
-      return;
-    }
-    Alert.alert("Sucesso", "Senha redefinida com sucesso!");
-  };
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -53,71 +38,65 @@ export default function ForgotPasswordScreen() {
           onChangeText={setEmail}
         />
 
-        {/* Senha Nova */}
-        <Text style={styles.label}>Senha Nova</Text>
+        {/* Senha */}
+        <Text style={styles.label}>Senha</Text>
         <View style={styles.passwordContainer}>
           <TextInput
             style={[styles.input, { flex: 1 }]}
-            placeholder="Digite a nova senha"
+            placeholder="Digite sua senha"
             placeholderTextColor="#aaa"
-            secureTextEntry={!showNewPassword}
-            value={newPassword}
-            onChangeText={setNewPassword}
+            secureTextEntry={!showPassword}
+            value={password}
+            onChangeText={setPassword}
           />
           <TouchableOpacity
-            onPress={() => setShowNewPassword(!showNewPassword)}
+            onPress={() => setShowPassword(!showPassword)}
             style={styles.eyeIcon}
           >
             <Ionicons
-              name={showNewPassword ? "eye-off-outline" : "eye-outline"}
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
               size={22}
               color="#ccc"
             />
           </TouchableOpacity>
         </View>
 
-        {/* Confirmar Senha */}
-        <Text style={styles.label}>Confirmar a Senha Nova</Text>
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            placeholder="Confirme sua nova senha"
-            placeholderTextColor="#aaa"
-            secureTextEntry={!showConfirm}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-          />
-          <TouchableOpacity
-            onPress={() => setShowConfirm(!showConfirm)}
-            style={styles.eyeIcon}
-          >
-            <Ionicons
-              name={showConfirm ? "eye-off-outline" : "eye-outline"}
-              size={22}
-              color="#ccc"
-            />
-          </TouchableOpacity>
+        {/* Esqueci minha senha */}
+        <TouchableOpacity onPress={() => router.push("/forgot_password")}> 
+          <Text style={styles.forgot}>Esqueci minha Senha</Text>
+        </TouchableOpacity>
+
+        {/* Botão conectar */}
+        <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)')}>
+          <Text style={styles.buttonText}>Conectar</Text>
+        </TouchableOpacity>
+
+        {/* Linha divisória */}
+        <View style={styles.dividerContainer}>
+          <View style={styles.line} />
+          <Text style={styles.ou}>OU</Text>
+          <View style={styles.line} />
         </View>
 
-        {/* Botão Redefinir */}
-        <TouchableOpacity style={styles.button} onPress={handleResetPassword}>
-          <Text style={styles.buttonText}>Redefinir Senha</Text>
+        {/* Google */}
+        <TouchableOpacity style={styles.googleButton}>
+          <Ionicons name="logo-google" size={18} color="#fff" />
+          <Text style={styles.googleText}>Continuar com o google</Text>
         </TouchableOpacity>
 
-        {/* Voltar para Login */}
-        <TouchableOpacity
-          onPress={() => router.push("/")}
-          style={styles.backButton}
-        >
-          <Text style={styles.backButtonText}>← Voltar para Login</Text>
-        </TouchableOpacity>
-
-        {/* Link para Registrar */}
+        {/* Registro */}
         <Text style={styles.registerText}>
           Não possui uma conta?
           <TouchableOpacity onPress={() => router.push("/register")}>
             <Text style={styles.registerLink}> Registre-se aqui</Text>
           </TouchableOpacity>
+        </Text>
+
+        {/* Termos */}
+        <Text style={styles.terms}>
+          Ao continuar, afirmo que concordo com a{" "}
+          <Text style={styles.link}>Política de privacidade</Text> e os{" "}
+          <Text style={styles.link}>Termos de uso</Text> do My Finance.
         </Text>
       </View>
     </ScrollView>
@@ -170,6 +149,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 10,
   },
+  forgot: {
+    color: "#0095ff",
+    fontSize: 13,
+    marginTop: 8,
+    alignSelf: "flex-start",
+  },
   button: {
     backgroundColor: "#22aa22",
     borderRadius: 20,
@@ -183,18 +168,33 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
   },
-  backButton: {
-    marginTop: 15,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#333",
-    borderRadius: 10,
+  dividerContainer: {
+    flexDirection: "row",
     alignItems: "center",
+    marginVertical: 15,
   },
-  backButtonText: {
-    color: "#0095ff",
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#999",
+  },
+  ou: {
+    color: "#ccc",
+    marginHorizontal: 10,
+  },
+  googleButton: {
+    backgroundColor: "#4285F4",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 10,
+    width: "100%",
+  },
+  googleText: {
+    color: "#fff",
     fontWeight: "bold",
-    fontSize: 14,
+    marginLeft: 8,
   },
   registerText: {
     color: "#ccc",
@@ -203,5 +203,14 @@ const styles = StyleSheet.create({
   registerLink: {
     color: "#0095ff",
     fontWeight: "bold",
+  },
+  terms: {
+    fontSize: 11,
+    color: "#888",
+    textAlign: "center",
+    marginTop: 20,
+  },
+  link: {
+    color: "#0095ff",
   },
 });
