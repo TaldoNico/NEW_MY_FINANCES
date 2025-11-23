@@ -1,28 +1,33 @@
 import { Ionicons } from "@expo/vector-icons";
 // @ts-nocheck
+import { useRouter } from "expo-router";
 import React from "react";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function SettingsScreen() {
+  const router = useRouter();
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      
       {/* Header com Botão Voltar e Título */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={28} color="#fff" />
         </TouchableOpacity>
+
         <Text style={styles.headerTitle}>Configurações</Text>
         <View style={{ width: 28 }} />
       </View>
 
-      {/* Gráfico Pizza (placeholder) */}
+      {/* Logo */}
       <View style={styles.chartContainer}>
         <Image
           source={require("@/assets/images/MYFINANCES-LOGO.png")}
@@ -31,10 +36,14 @@ export default function SettingsScreen() {
         />
       </View>
 
-      {/* Menu Items */}
+      {/* Menu */}
       <View style={styles.menuContainer}>
-        {/* Perfil */}
-        <TouchableOpacity style={styles.menuItem}>
+
+        {/* PERFIL */}
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push("/profile")}
+        >
           <View style={styles.menuItemLeft}>
             <Ionicons name="person-circle" size={20} color="#0095ff" />
             <Text style={styles.menuText}>PERFIL</Text>
@@ -49,7 +58,7 @@ export default function SettingsScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Minhas Conquistas */}
+        {/* Conquistas */}
         <TouchableOpacity style={styles.menuItem}>
           <View style={styles.menuItemLeft}>
             <Ionicons name="trophy" size={20} color="#ffa500" />
@@ -72,10 +81,10 @@ export default function SettingsScreen() {
             <Text style={styles.menuText}>SOBRE</Text>
           </View>
         </TouchableOpacity>
+
       </View>
 
-      {/* Versão */}
-      <Text style={styles.version}>Versão • 03.10.25</Text>
+      <Text style={styles.version}>Versão • 22.10.25</Text>
     </ScrollView>
   );
 }
@@ -112,39 +121,6 @@ const styles = StyleSheet.create({
   pieChart: {
     width: 180,
     height: 150,
-  },
-  pieSection1: {
-    position: "absolute",
-    width: 150,
-    height: 75,
-    backgroundColor: "#22aa22",
-    borderTopLeftRadius: 150,
-    borderTopRightRadius: 150,
-  },
-  pieSection2: {
-    position: "absolute",
-    width: 75,
-    height: 150,
-    backgroundColor: "#ffd700",
-    borderTopRightRadius: 150,
-  },
-  pieSection3: {
-    position: "absolute",
-    width: 150,
-    height: 75,
-    backgroundColor: "#ff6b6b",
-    bottom: 0,
-    borderBottomLeftRadius: 150,
-    borderBottomRightRadius: 150,
-  },
-  pieSection4: {
-    position: "absolute",
-    width: 75,
-    height: 150,
-    backgroundColor: "#0095ff",
-    left: 0,
-    borderTopLeftRadius: 150,
-    borderBottomLeftRadius: 150,
   },
   menuContainer: {
     paddingHorizontal: 16,

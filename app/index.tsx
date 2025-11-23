@@ -3,13 +3,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function LoginScreen() {
@@ -56,7 +56,7 @@ export default function LoginScreen() {
             <Ionicons
               name={showPassword ? "eye-off-outline" : "eye-outline"}
               size={22}
-              color="#ccc"
+              color="#000000ff"
             />
           </TouchableOpacity>
         </View>
@@ -67,7 +67,7 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         {/* Botão conectar */}
-        <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)')}>
+        <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)/home')}>
           <Text style={styles.buttonText}>Conectar</Text>
         </TouchableOpacity>
 

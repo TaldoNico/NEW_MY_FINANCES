@@ -72,7 +72,7 @@ export default function ForgotPasswordScreen() {
             <Ionicons
               name={showNewPassword ? "eye-off-outline" : "eye-outline"}
               size={22}
-              color="#ccc"
+              color="#000000ff"
             />
           </TouchableOpacity>
         </View>
@@ -95,7 +95,7 @@ export default function ForgotPasswordScreen() {
             <Ionicons
               name={showConfirm ? "eye-off-outline" : "eye-outline"}
               size={22}
-              color="#ccc"
+              color="#000000ff"
             />
           </TouchableOpacity>
         </View>

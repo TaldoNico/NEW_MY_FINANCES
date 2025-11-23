@@ -71,7 +71,7 @@ export default function RegisterScreen() {
             <Ionicons
               name={showPassword ? "eye-off-outline" : "eye-outline"}
               size={22}
-              color="#ccc"
+              color="#000000ff"
             />
           </TouchableOpacity>
         </View>
@@ -94,7 +94,7 @@ export default function RegisterScreen() {
             <Ionicons
               name={showConfirm ? "eye-off-outline" : "eye-outline"}
               size={22}
-              color="#ccc"
+              color="#000000ff"
             />
           </TouchableOpacity>
         </View>

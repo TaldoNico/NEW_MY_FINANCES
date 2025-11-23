@@ -19,10 +19,15 @@ export default function Home() {
 
   const [viewMode, setViewMode] = useState("grid");
   const [reports, setReports] = useState([]);
+
   const [editModal, setEditModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
+
+  const [confirmDeleteModal, setConfirmDeleteModal] = useState(false);
+
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#FF6B6B");
+
   const [createModal, setCreateModal] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createColor, setCreateColor] = useState("#4ECDC4");
@@ -30,23 +35,21 @@ export default function Home() {
   useEffect(() => {
     if (create === "1") {
       setCreateModal(true);
-      try {
-        router.replace("/(tabs)/home");
-      } catch (e) {}
+      router.replace("/(tabs)/home");
     }
   }, [create]);
 
   const colors = [
-    "#FF6B6B",
-    "#4ECDC4",
-    "#45B7D1",
-    "#96CEB4",
-    "#FFEAA7",
-    "#DDA15E",
-    "#BC6C25",
-    "#D4A373",
-    "#9D84B7",
-  ];
+    "#E63946",
+    "#F94144",
+    "#F3722C",
+    "#F8961E",
+    "#F9C74F",
+    "#90BE6D",
+    "#43AA8B",
+    "#4D908E",
+    "#577590",
+      ];
 
   const toggleView = () => {
     setViewMode((prev) => (prev === "grid" ? "list" : "grid"));
@@ -67,6 +70,16 @@ export default function Home() {
           : r
       )
     );
+    setEditModal(false);
+  };
+
+  const confirmDelete = () => {
+    setConfirmDeleteModal(true);
+  };
+
+  const deleteReport = () => {
+    setReports((prev) => prev.filter((r) => r.id !== selectedReport.id));
+    setConfirmDeleteModal(false);
     setEditModal(false);
   };
 
@@ -108,10 +121,7 @@ export default function Home() {
         >
           <View style={styles.reportHeader}>
             <Text style={styles.reportName}>{item.name}</Text>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => openEdit(item)}
-            >
+            <TouchableOpacity style={styles.editButton} onPress={() => openEdit(item)}>
               <Ionicons name="pencil" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -141,12 +151,7 @@ export default function Home() {
           onPress={() => handleReportPress(item)}
           activeOpacity={0.8}
         >
-          <View
-            style={[
-              styles.listColorIndicator,
-              { backgroundColor: item.color },
-            ]}
-          />
+          <View style={[styles.listColorIndicator, { backgroundColor: item.color }]} />
 
           <View style={styles.listContent}>
             <Text style={styles.listTitle}>{item.name}</Text>
@@ -158,10 +163,7 @@ export default function Home() {
                 <View
                   style={[
                     styles.listProgressFill,
-                    {
-                      width: `${item.progress}%`,
-                      backgroundColor: item.color,
-                    },
+                    { width: `${item.progress}%`, backgroundColor: item.color },
                   ]}
                 />
               </View>
@@ -170,10 +172,7 @@ export default function Home() {
             </View>
           </View>
 
-          <TouchableOpacity
-            onPress={() => openEdit(item)}
-            style={styles.listEditButton}
-          >
+          <TouchableOpacity onPress={() => openEdit(item)} style={styles.listEditButton}>
             <Ionicons name="pencil" size={20} color={item.color} />
           </TouchableOpacity>
         </TouchableOpacity>
@@ -187,11 +186,7 @@ export default function Home() {
       <View style={[styles.header, { marginTop: 50 }]}>
         <Text style={styles.headerTitle}>Home</Text>
         <TouchableOpacity onPress={toggleView} style={styles.iconButton}>
-          <Ionicons
-            name={viewMode === "grid" ? "list" : "grid"}
-            size={24}
-            color="#fff"
-          />
+          <Ionicons name={viewMode === "grid" ? "list" : "grid"} size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -204,20 +199,14 @@ export default function Home() {
           numColumns={viewMode === "grid" ? 2 : 1}
           key={viewMode}
           contentContainerStyle={styles.list}
-          columnWrapperStyle={
-            viewMode === "grid" ? { gap: 16 } : undefined
-          }
+          columnWrapperStyle={viewMode === "grid" ? { gap: 16 } : undefined}
           scrollEnabled={false}
         />
       ) : (
         <ScrollView contentContainerStyle={styles.emptyContainer}>
           <Ionicons name="document-outline" size={80} color="#666" />
-          <Text style={styles.emptyText}>
-            Infelizmente não há nenhum relátorio disponivel no momento...
-          </Text>
-          <Text style={styles.emptySubtext}>
-            Toque no + para criar um relatório
-          </Text>
+          <Text style={styles.emptyText}>Infelizmente não há nenhum relatório disponível...</Text>
+          <Text style={styles.emptySubtext}>Toque no + para criar um relatório</Text>
         </ScrollView>
       )}
 
@@ -254,16 +243,54 @@ export default function Home() {
             </View>
 
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.btn, { backgroundColor: "#4ECDC4" }]}
-                onPress={saveEdit}
-              >
+              <TouchableOpacity style={[styles.btn, { backgroundColor: "#4ECDC4" }]} onPress={saveEdit}>
                 <Text style={styles.btnText}>Salvar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={[styles.btn, { backgroundColor: "#666" }]} onPress={() => setEditModal(false)}>
+                <Text style={styles.btnText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* BOTÃO DE EXCLUIR MODIFICADO */}
+            <TouchableOpacity
+              style={{
+                width: "100%",
+                backgroundColor: "#b71c1c",
+                padding: 14,
+                borderRadius: 10,
+                alignItems: "center",
+                marginTop: 12,
+              }}
+              onPress={confirmDelete}
+            >
+              <Text style={styles.btnText}>Excluir</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* CONFIRM DELETE MODAL */}
+      <Modal visible={confirmDeleteModal} transparent animationType="fade">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Confirmar Exclusão</Text>
+
+            <Text style={{ color: "#fff", marginBottom: 20, fontSize: 16 }}>
+              Tem certeza que deseja excluir este relatório?
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.btn, { backgroundColor: "#b71c1c" }]}
+                onPress={deleteReport}
+              >
+                <Text style={styles.btnText}>Excluir</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.btn, { backgroundColor: "#666" }]}
-                onPress={() => setEditModal(false)}
+                onPress={() => setConfirmDeleteModal(false)}
               >
                 <Text style={styles.btnText}>Cancelar</Text>
               </TouchableOpacity>
@@ -326,11 +353,9 @@ export default function Home() {
   );
 }
 
+/* STYLES */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#121212",
-  },
+  container: { flex: 1, backgroundColor: "#121212" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -338,53 +363,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 20,
     backgroundColor: "#1a1a1a",
-    marginTop: 0,
   },
-  headerTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  iconButton: {
-    padding: 8,
-    backgroundColor: "#2b2b2b",
-    borderRadius: 8,
-  },
-  list: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingBottom: 100,
-  },
+  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  iconButton: { padding: 8, backgroundColor: "#2b2b2b", borderRadius: 8 },
 
-  /* AQUI É O ESPAÇAMENTO NOVO DOS CARDS */
+  list: { paddingHorizontal: 16, paddingVertical: 16, paddingBottom: 100 },
+
   reportCardGrid: {
     borderRadius: 12,
     padding: 16,
     width: "48%",
     minHeight: 160,
     justifyContent: "space-between",
-    marginBottom: 16, // novo espaçamento ✔
+    marginBottom: 16,
   },
 
-  reportHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  reportName: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
+  reportHeader: { flexDirection: "row", justifyContent: "space-between" },
+  reportName: { color: "#fff", fontSize: 16, fontWeight: "700" },
   editButton: {
     padding: 6,
     backgroundColor: "rgba(0,0,0,0.2)",
     borderRadius: 6,
     marginLeft: 8,
   },
-  progressSection: {
-    marginVertical: 12,
-  },
+
+  progressSection: { marginVertical: 12 },
   progressBar: {
     height: 6,
     backgroundColor: "rgba(255,255,255,0.3)",
@@ -392,24 +395,13 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 6,
   },
-  progressFill: {
-    height: "100%",
-    borderRadius: 3,
-  },
-  progressText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  dateText: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 12,
-    marginTop: 8,
-  },
+  progressFill: { height: "100%", borderRadius: 3 },
+  progressText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+
+  dateText: { color: "rgba(255,255,255,0.7)", fontSize: 12 },
 
   reportCardList: {
     flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "#1e1e1e",
     borderRadius: 12,
     padding: 16,
@@ -421,83 +413,34 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     marginRight: 12,
   },
-  listContent: {
-    flex: 1,
-  },
-  listTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  listInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  listDate: {
-    color: "#888",
-    fontSize: 12,
-  },
+  listContent: { flex: 1 },
+  listTitle: { color: "#fff", fontSize: 16, fontWeight: "700", marginBottom: 8 },
+  listInfo: { flexDirection: "row", alignItems: "center", gap: 12 },
+  listDate: { color: "#888", fontSize: 12 },
   listProgressBar: {
     height: 4,
     backgroundColor: "#333",
     borderRadius: 2,
-    overflow: "hidden",
     width: 60,
+    overflow: "hidden",
   },
-  listProgressFill: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  listProgress: {
-    color: "#0095ff",
-    fontSize: 12,
-    fontWeight: "600",
-    minWidth: 35,
-  },
-  listEditButton: {
-    padding: 8,
-  },
+  listProgressFill: { height: "100%" },
+  listProgress: { color: "#0095ff", fontSize: 12, fontWeight: "600", minWidth: 35 },
+  listEditButton: { padding: 8 },
 
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 60,
-  },
-  emptyText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
-    marginTop: 16,
-  },
-  emptySubtext: {
-    color: "#888",
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: "center",
-  },
+  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  emptyText: { color: "#fff", fontSize: 18, marginTop: 16 },
+  emptySubtext: { color: "#888", marginTop: 8 },
 
   modalContainer: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.8)",
     justifyContent: "center",
-    alignItems: "center",
     paddingHorizontal: 20,
   },
-  modalContent: {
-    backgroundColor: "#1e1e1e",
-    borderRadius: 16,
-    width: "100%",
-    padding: 24,
-  },
-  modalTitle: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
+  modalContent: { backgroundColor: "#1e1e1e", borderRadius: 16, padding: 24 },
+  modalTitle: { color: "#fff", fontSize: 20, marginBottom: 20 },
+
   input: {
     backgroundColor: "#2b2b2b",
     borderRadius: 10,
@@ -506,37 +449,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontSize: 16,
   },
-  colorLabel: {
-    color: "#fff",
-    marginBottom: 12,
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  colorPalette: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    marginBottom: 24,
-    gap: 10,
-  },
-  colorCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  btn: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  btnText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+  colorLabel: { color: "#fff", marginBottom: 12 },
+  colorPalette: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 10 },
+  colorCircle: { width: 40, height: 40, borderRadius: 20 },
+
+  modalButtons: { flexDirection: "row", gap: 12 },
+  btn: { flex: 1, padding: 12, borderRadius: 10, alignItems: "center" },
+  btnText: { color: "#fff", fontWeight: "bold" },
 });
