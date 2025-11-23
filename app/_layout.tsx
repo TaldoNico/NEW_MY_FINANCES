@@ -18,10 +18,12 @@ export default function RootLayout() {
         <Stack.Screen name="register" />
         <Stack.Screen name="forgot_password" />
 
-        {/* ⭐ AQUI ESTÁ A NOVA TELA PROFILE */}
+        {/* Telas do App */}
         <Stack.Screen name="profile" />
+        
 
         {/* App Principal com Abas */}
+        <Stack.Screen name="goals" /> {/* ← Tela goals adicionada */}
         <Stack.Screen name="(tabs)" />
 
         {/* Modal */}
