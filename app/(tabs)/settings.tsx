@@ -24,6 +24,8 @@ export default function SettingsScreen() {
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Configurações</Text>
+
+        {/* Espaço para manter alinhamento */}
         <View style={{ width: 28 }} />
       </View>
 
@@ -36,7 +38,7 @@ export default function SettingsScreen() {
         />
       </View>
 
-      {/* Menu */}
+      {/* Menu Principal */}
       <View style={styles.menuContainer}>
 
         {/* PERFIL */}
@@ -51,15 +53,21 @@ export default function SettingsScreen() {
         </TouchableOpacity>
 
         {/* Minhas Metas */}
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push("/goals")}
+        >
           <View style={styles.menuItemLeft}>
             <Ionicons name="flag" size={20} color="#0095ff" />
             <Text style={styles.menuText}>MINHAS METAS</Text>
           </View>
         </TouchableOpacity>
 
-        {/* Conquistas */}
-        <TouchableOpacity style={styles.menuItem}>
+        {/* Minhas Conquistas */}
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push("/achievements")}
+        >
           <View style={styles.menuItemLeft}>
             <Ionicons name="trophy" size={20} color="#ffa500" />
             <Text style={styles.menuText}>MINHAS CONQUISTAS</Text>

@@ -1,64 +1,119 @@
 // Arquivo: app/(tabs)/goals.tsx
 
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-// Importe SafeAreaView e Link do Expo Router
-import { Link } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-const styles = StyleSheet.create({
-  // Mantenha os estilos da resposta anterior
-  container: {
-    flex: 1,
-    backgroundColor: '#1E1E1E', 
-  },
-  content: {
-    padding: 15,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginLeft: 10,
-    marginTop: 5,
-  },
-  addButtonContainer: {
-    marginTop: 20,
-    width: 100,
-    height: 100,
-    backgroundColor: '#3A3A3A', 
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 15,
-  },
-  addButtonText: {
-    fontSize: 50,
-    color: '#FFFFFF',
-  },
-});
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Link, useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function GoalsScreen() {
+  const [goals, setGoals] = useState([]);
+
+  // Carregar metas sempre que abrir a tela
+  useFocusEffect(
+    useCallback(() => {
+      loadGoals();
+    }, [])
+  );
+
+  const loadGoals = async () => {
+    try {
+      const saved = await AsyncStorage.getItem("goals");
+      if (saved) {
+        setGoals(JSON.parse(saved));
+      }
+    } catch (err) {
+      console.log("Erro ao carregar metas:", err);
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+      
       <Text style={styles.headerTitle}>Minhas Metas</Text>
 
       <View style={styles.content}>
-        {/*
-          Usamos o componente <Link> para navegar.
-          O caminho é baseado no nome do arquivo: newgoals.tsx -> /newgoals
-          Se o arquivo estivesse em (tabs)/newgoals.tsx, o caminho seria /newgoals.
-          Se o arquivo estiver na raiz (app/newgoals.tsx), o caminho é /newgoals.
-        */}
-        <Link 
-            href="/newgoals" // Ajuste o caminho se newgoals.tsx estiver em outra pasta
-            asChild // Necessário para usar TouchableOpacity como filho
-        >
-            <TouchableOpacity style={styles.addButtonContainer}>
-                <Text style={styles.addButtonText}>+</Text>
-            </TouchableOpacity>
+        
+        {/* Card para adicionar nova meta */}
+        <Link href="/newgoals" asChild>
+          <TouchableOpacity style={styles.addButtonContainer}>
+            <Text style={styles.addButtonText}>+</Text>
+          </TouchableOpacity>
         </Link>
+
+        {/* Lista de metas */}
+        {goals.map((goal, index) => (
+          <View key={index} style={styles.goalCard}>
+            <Text style={styles.goalText}>{goal.titulo}</Text>
+          </View>
+        ))}
+
       </View>
+
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#1E1E1E",
+    paddingHorizontal: 20,
+  },
+
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginTop: 10,
+    marginBottom: 15,
+  },
+
+  content: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 15,
+  },
+
+  addButtonContainer: {
+    width: 110,
+    height: 110,
+    backgroundColor: "#2F2F2F",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    elevation: 6,
+  },
+
+  addButtonText: {
+    fontSize: 55,
+    color: "#FFFFFF",
+    marginTop: -4,
+  },
+
+  goalCard: {
+    width: 110,
+    height: 110,
+    backgroundColor: "#3A3A3A",
+    borderRadius: 12,
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 4,
+    elevation: 4,
+  },
+
+  goalText: {
+    color: "#FFF",
+    fontSize: 14,
+    textAlign: "center",
+    fontWeight: "500",
+  }
+});

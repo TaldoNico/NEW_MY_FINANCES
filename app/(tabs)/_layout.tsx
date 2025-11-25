@@ -23,16 +23,18 @@ export default function TabLayout() {
         name="home"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color="#ffff" />,
         }}
       />
       <Tabs.Screen
-        name="achievements"
-        options={{
-          title: 'Conquistas',
-          tabBarIcon: ({ color }) => <Ionicons name="trophy" size={28} color={color} />,
-        }}
-      />
+  name="achievements"
+  options={{
+    title: 'Conquistas',
+    tabBarIcon: () => (
+      <Ionicons name="trophy" size={28} color="#FFB800" />
+    ),
+  }}
+    />
       <Tabs.Screen
         name="report"
         options={{
@@ -43,10 +45,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="my_goals"
+        name="goals"
         options={{
           title: 'Metas',
-          tabBarIcon: ({ color }) => <Ionicons name="pin" size={28} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="flag" size={28} color="#0D9AFE" />,
         }}
       />
       <Tabs.Screen
