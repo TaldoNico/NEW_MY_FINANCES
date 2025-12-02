@@ -1,6 +1,7 @@
 // services/firebase.ts
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 // Config do Firebase (a que você copiou do console)
 const firebaseConfig = {
@@ -18,5 +19,8 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 // Firestore (banco de dados)
 export const db = getFirestore(app);
+
+// Auth (login)
+export const auth = getAuth(app);
 
 export default app;

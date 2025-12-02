@@ -1,17 +1,21 @@
 // @ts-nocheck
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-// @ts-nocheck
 import React, { useState } from "react";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+
+import { auth, db } from "../services/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -20,17 +24,66 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!email || !password || !confirmPassword) {
-      alert("Preencha todos os campos!");
+      Alert.alert("Atenção", "Preencha todos os campos!");
       return;
     }
+
     if (password !== confirmPassword) {
-      alert("As senhas não coincidem!");
+      Alert.alert("Atenção", "As senhas não coincidem!");
       return;
     }
-    alert("Conta registrada com sucesso!");
+
+    if (password.length < 6) {
+      Alert.alert("Atenção", "A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 1) Cria o usuário no Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
+      );
+
+      const user = userCredential.user;
+
+      // 2) Salva dados extras no Firestore (coleção users)
+      await setDoc(doc(db, "users", user.uid), {
+        email: user.email,
+        createdAt: serverTimestamp(),
+      });
+
+      // 3) Mensagem e volta pra tela de login
+      Alert.alert("Sucesso", "Conta criada com sucesso!", [
+        {
+          text: "OK",
+          onPress: () => router.push("/"), // volta pro login
+        },
+      ]);
+    } catch (error: any) {
+      console.log(error);
+
+      let message = "Erro ao criar conta. Tente novamente.";
+
+      if (error.code === "auth/email-already-in-use") {
+        message = "Esse e-mail já está sendo usado.";
+      } else if (error.code === "auth/invalid-email") {
+        message = "E-mail inválido.";
+      } else if (error.code === "auth/weak-password") {
+        message = "Senha muito fraca. Use outra.";
+      }
+
+      Alert.alert("Erro", message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -51,6 +104,8 @@ export default function RegisterScreen() {
           placeholderTextColor="#aaa"
           value={email}
           onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
 
         {/* Senha */}
@@ -100,12 +155,14 @@ export default function RegisterScreen() {
         </View>
 
         {/* Botão Registrar */}
-        <TouchableOpacity style={styles.button} onPress={handleRegister}>
-          <Text style={styles.buttonText}>Registrar-se</Text>
+        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
+          <Text style={styles.buttonText}>
+            {loading ? "Registrando..." : "Registrar-se"}
+          </Text>
         </TouchableOpacity>
 
         {/* Linha divisória */}
-        <View style={styles.dividerContainer}>
+        <View className="dividerContainer" style={styles.dividerContainer}>
           <View style={styles.line} />
           <Text style={styles.ou}>OU</Text>
           <View style={styles.line} />
