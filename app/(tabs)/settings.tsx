@@ -2,6 +2,7 @@
 // @ts-nocheck
 import React from "react";
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,14 +12,43 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
+import { auth } from "../../services/firebase";
+import { signOut } from "firebase/auth";
+
 export default function SettingsScreen() {
   const router = useRouter();
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Encerrar sessão",
+      "Tem certeza que deseja sair da sua conta?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Sair",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await signOut(auth);
+              // volta para a tela de login SEM deixar as tabs no histórico
+              router.replace("/");
+            } catch (err) {
+              console.log("Erro ao encerrar sessão:", err);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.card}>
-        {/* Botão voltar (se tiver stack) */}
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        {/* Botão voltar */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
 
@@ -78,10 +108,27 @@ export default function SettingsScreen() {
           onPress={() => router.push("/about_us")}
         >
           <View style={styles.optionLeft}>
-            <Ionicons name="information-circle-outline" size={24} color="#1e90ff" />
+            <Ionicons
+              name="information-circle-outline"
+              size={24}
+              color="#1e90ff"
+            />
             <Text style={styles.optionText}>SOBRE</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </TouchableOpacity>
+
+        {/* Botão ENCERRAR SESSÃO */}
+        <TouchableOpacity
+          style={[styles.option, styles.logoutOption]}
+          onPress={handleLogout}
+        >
+          <View style={styles.optionLeft}>
+            <Ionicons name="log-out-outline" size={24} color="#ff4d4d" />
+            <Text style={[styles.optionText, { color: "#ff4d4d" }]}>
+              ENCERRAR SESSÃO
+            </Text>
+          </View>
         </TouchableOpacity>
 
         <Text style={styles.version}>Versão • 22.10.25</Text>
@@ -133,6 +180,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  logoutOption: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#ff4d4d55",
   },
   optionLeft: {
     flexDirection: "row",

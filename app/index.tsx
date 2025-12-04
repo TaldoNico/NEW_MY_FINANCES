@@ -35,8 +35,8 @@ export default function LoginScreen() {
       // Login REAL no Firebase
       await signInWithEmailAndPassword(auth, email.trim(), password);
 
-      // Se chegou aqui → login OK
-      router.push("/(tabs)/home");
+      // LOGIN OK → Redirecionar sem permitir voltar para tela de login
+      router.replace("/(tabs)/home");
 
     } catch (error: any) {
       console.log("❌ ERRO NO LOGIN:", error);
@@ -109,7 +109,11 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         {/* Botão conectar */}
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleLogin}
+          disabled={loading}
+        >
           <Text style={styles.buttonText}>
             {loading ? "Conectando..." : "Conectar"}
           </Text>

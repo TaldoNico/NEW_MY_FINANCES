@@ -1,7 +1,8 @@
 // Arquivo: app/(tabs)/goals.tsx
+// @ts-nocheck
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Link, useFocusEffect } from "expo-router";
+import { Link, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   Alert,
@@ -16,7 +17,10 @@ import { auth } from "../../services/firebase";
 
 type Goal = {
   titulo: string;
-  // outros campos (valorMeta, prazo, etc.) podem estar aqui também
+  valor_total?: string;
+  valor_atual?: string;
+  prazo?: string;
+  descricao?: string;
   [key: string]: any;
 };
 
@@ -24,12 +28,13 @@ type Goal = {
 const getGoalsStorageKey = () => {
   const user = auth.currentUser;
   if (!user) {
-    return "goals_guest"; // se não tiver usuário (só por segurança)
+    return "goals_guest";
   }
   return `goals_${user.uid}`;
 };
 
 export default function GoalsScreen() {
+  const router = useRouter();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [selectedGoals, setSelectedGoals] = useState<number[]>([]); // índices selecionados
 
@@ -64,6 +69,21 @@ export default function GoalsScreen() {
         return prev.filter((i) => i !== index);
       }
       return [...prev, index];
+    });
+  };
+
+  // Abrir detalhes da meta
+  const handleOpenGoal = (goal: Goal, index: number) => {
+    router.push({
+      pathname: "/goal_detail",
+      params: {
+        index: String(index),
+        titulo: goal.titulo ?? "",
+        valor_total: goal.valor_total ?? "",
+        valor_atual: goal.valor_atual ?? "",
+        prazo: goal.prazo ?? "",
+        descricao: goal.descricao ?? "",
+      },
     });
   };
 
@@ -141,7 +161,14 @@ export default function GoalsScreen() {
                 {isSelected && <View style={styles.checkboxDot} />}
               </TouchableOpacity>
 
-              <Text style={styles.goalText}>{goal.titulo}</Text>
+              {/* Área que abre os detalhes da meta */}
+              <TouchableOpacity
+                style={styles.goalContent}
+                onPress={() => handleOpenGoal(goal, index)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.goalText}>{goal.titulo}</Text>
+              </TouchableOpacity>
             </View>
           );
         })}
@@ -211,6 +238,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
     position: "relative",
+  },
+
+  goalContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
   },
 
   goalText: {
