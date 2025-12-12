@@ -1,4 +1,6 @@
 // @ts-nocheck
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import React from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Category } from '../types/category';
@@ -35,6 +37,65 @@ export const FinancialReport = ({
 
     const formatCurrency = (value: number): string => {
         return `R$ ${Math.abs(value).toFixed(2).replace('.', ',')}`;
+    };
+
+    const exportReport = async () => {
+        const htmlContent = `
+            <html>
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        h1 { color: #2ecc71; text-align: center; }
+                        .section { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; }
+                        .balance { font-size: 24px; font-weight: bold; text-align: center; }
+                        .positive { color: green; }
+                        .negative { color: red; }
+                        .tip { background-color: #f9f9f9; padding: 10px; margin: 5px 0; border-radius: 5px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Relatório Financeiro - MyFinances</h1>
+                    <div class="section">
+                        <h2>Saldo do Período</h2>
+                        <p class="balance ${analysis.monthlyBalance >= 0 ? 'positive' : 'negative'}">
+                            ${analysis.monthlyBalance >= 0 ? '+ ' : '- '} ${formatCurrency(analysis.monthlyBalance)}
+                        </p>
+                    </div>
+                    <div class="section">
+                        <h2>Taxa de Economia</h2>
+                        <p>${analysis.savingsRate.toFixed(1)}%</p>
+                    </div>
+                    ${analysis.biggestExpenseCategory.name ? `
+                    <div class="section">
+                        <h2>Maior Gasto</h2>
+                        <p>${analysis.biggestExpenseCategory.name}: ${formatCurrency(analysis.biggestExpenseCategory.value)} (${analysis.biggestExpenseCategory.percentage.toFixed(1)}%)</p>
+                    </div>
+                    ` : ''}
+                    ${analysis.unusualExpenses.length > 0 ? `
+                    <div class="section">
+                        <h2>Gastos Incomuns</h2>
+                        ${analysis.unusualExpenses.map(expense => `<p>${expense.category}: +${expense.increase.toFixed(1)}%</p>`).join('')}
+                    </div>
+                    ` : ''}
+                    <div class="section">
+                        <h2>Dicas e Observações</h2>
+                        ${analysis.tips.map(tip => `<div class="tip">${tip}</div>`).join('')}
+                    </div>
+                </body>
+            </html>
+        `;
+        try {
+            const { uri } = await Print.printToFileAsync({ html: htmlContent });
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Compartilhar Relatório Financeiro' });
+            } else {
+                alert('Compartilhamento não disponível neste dispositivo.');
+            }
+        } catch (error) {
+            console.error('Erro ao gerar PDF:', error);
+            alert('Erro ao gerar o relatório.');
+        }
     };
 
     return (
@@ -110,9 +171,14 @@ export const FinancialReport = ({
                         </View>
                     </ScrollView>
 
-                    <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                        <Text style={styles.closeButtonText}>Fechar</Text>
-                    </TouchableOpacity>
+                    <View style={styles.buttonContainer}>
+                        <TouchableOpacity style={styles.exportButton} onPress={exportReport}>
+                            <Text style={styles.exportButtonText}>Enviar Relatório</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                            <Text style={styles.closeButtonText}>Fechar</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
         </Modal>
@@ -207,10 +273,28 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.primary,
         padding: 15,
         borderRadius: 8,
-        marginTop: 15,
         alignItems: 'center',
+        flex: 1,
+        marginLeft: 10,
     },
     closeButtonText: {
+        color: '#FFF',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+        marginTop: 15,
+    },
+    exportButton: {
+        backgroundColor: COLORS.warning,
+        padding: 15,
+        borderRadius: 8,
+        alignItems: 'center',
+        flex: 1,
+        marginRight: 10,
+    },
+    exportButtonText: {
         color: '#FFF',
         fontSize: 16,
         fontWeight: 'bold',
