@@ -2,53 +2,105 @@
 // @ts-nocheck
 import React, { createContext, useContext, useState } from "react";
 
+/* =====================
+   TIPOS
+===================== */
+
+export interface Transaction {
+  id: string;
+  type: "income" | "expense";
+  description: string;
+  amount: number;
+  date: string;
+}
+
 export interface Report {
   id: string;
   name: string;
   color: string;
-  date: string;
-  transactions: any[]; // movimentações pertencem SOMENTE a este relatório
+  date: string; // ex: 2025-01
+  transactions: Transaction[];
 }
 
 export interface ReportsContextType {
   reports: Report[];
-  addReport: (report: Report) => void;
-  updateReport: (id: string, report: Partial<Report>) => void;
-  deleteReport: (id: string) => void;
 
   currentReport: Report | null;
   setCurrentReport: (report: Report | null) => void;
 
-  addTransactionToReport: (reportId: string, transaction: any) => void;
+  addReport: (data: Omit<Report, "id" | "transactions">) => void;
+  updateReport: (id: string, report: Partial<Report>) => void;
+  deleteReport: (id: string) => void;
+
+  addTransactionToReport: (
+    reportId: string,
+    transaction: Transaction
+  ) => void;
 }
 
-export const ReportsContext = createContext<ReportsContextType | undefined>(
-  undefined
-);
+/* =====================
+   CONTEXT
+===================== */
+
+export const ReportsContext = createContext<
+  ReportsContextType | undefined
+>(undefined);
+
+/* =====================
+   PROVIDER
+===================== */
 
 export function ReportsProvider({ children }) {
   const [reports, setReports] = useState<Report[]>([]);
   const [currentReport, setCurrentReport] = useState<Report | null>(null);
 
-  // Criar relatório -> começa SEM transactions
-  const addReport = (report: Report) => {
-    setReports((prev) => [...prev, { ...report, transactions: [] }]);
+  /* =====================
+     CRIAR RELATÓRIO
+  ===================== */
+  const addReport = (data: Omit<Report, "id" | "transactions">) => {
+    const newReport: Report = {
+      id: Date.now().toString(),
+      ...data,
+      transactions: [],
+    };
+
+    setReports((prev) => [...prev, newReport]);
+    setCurrentReport(newReport); // 🔥 ESSENCIAL
   };
 
-  // Atualiza algum campo do relatório
+  /* =====================
+     ATUALIZAR RELATÓRIO
+  ===================== */
   const updateReport = (id: string, updatedData: Partial<Report>) => {
     setReports((prev) =>
       prev.map((r) => (r.id === id ? { ...r, ...updatedData } : r))
     );
+
+    if (currentReport?.id === id) {
+      setCurrentReport((prev) =>
+        prev ? { ...prev, ...updatedData } : prev
+      );
+    }
   };
 
-  // Deleta relatório
+  /* =====================
+     DELETAR RELATÓRIO
+  ===================== */
   const deleteReport = (id: string) => {
     setReports((prev) => prev.filter((r) => r.id !== id));
+
+    if (currentReport?.id === id) {
+      setCurrentReport(null);
+    }
   };
 
-  // ADICIONAR movimentação SOMENTE ao relatório selecionado
-  const addTransactionToReport = (reportId: string, transaction: any) => {
+  /* =====================
+     ADICIONAR TRANSAÇÃO
+  ===================== */
+  const addTransactionToReport = (
+    reportId: string,
+    transaction: Transaction
+  ) => {
     setReports((prev) =>
       prev.map((r) =>
         r.id === reportId
@@ -56,17 +108,25 @@ export function ReportsProvider({ children }) {
           : r
       )
     );
+
+    if (currentReport?.id === reportId) {
+      setCurrentReport((prev) =>
+        prev
+          ? { ...prev, transactions: [...prev.transactions, transaction] }
+          : prev
+      );
+    }
   };
 
   return (
     <ReportsContext.Provider
       value={{
         reports,
+        currentReport,
+        setCurrentReport,
         addReport,
         updateReport,
         deleteReport,
-        currentReport,
-        setCurrentReport,
         addTransactionToReport,
       }}
     >
@@ -74,6 +134,10 @@ export function ReportsProvider({ children }) {
     </ReportsContext.Provider>
   );
 }
+
+/* =====================
+   HOOK
+===================== */
 
 export function useReports() {
   const context = useContext(ReportsContext);
