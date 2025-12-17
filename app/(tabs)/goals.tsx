@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { auth } from "../../services/firebase";
+import { useStats } from "@/context/StatsContext";
 
 type Goal = {
   titulo: string;
@@ -21,24 +22,25 @@ type Goal = {
   valor_atual?: string;
   prazo?: string;
   descricao?: string;
+  concluida?: boolean;
   [key: string]: any;
 };
 
-// gera a chave de storage de acordo com o usuário logado
+// 🔑 Storage por usuário
 const getGoalsStorageKey = () => {
   const user = auth.currentUser;
-  if (!user) {
-    return "goals_guest";
-  }
+  if (!user) return "goals_guest";
   return `goals_${user.uid}`;
 };
 
 export default function GoalsScreen() {
   const router = useRouter();
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [selectedGoals, setSelectedGoals] = useState<number[]>([]); // índices selecionados
+  const { stats, updateStats } = useStats();
 
-  // Carregar metas sempre que abrir a tela
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [selectedGoals, setSelectedGoals] = useState<number[]>([]);
+
+  // 🔄 Carregar metas ao entrar na tela
   useFocusEffect(
     useCallback(() => {
       loadGoals();
@@ -49,31 +51,53 @@ export default function GoalsScreen() {
     try {
       const storageKey = getGoalsStorageKey();
       const saved = await AsyncStorage.getItem(storageKey);
-
-      if (saved) {
-        setGoals(JSON.parse(saved));
-      } else {
-        setGoals([]);
-      }
-
-      setSelectedGoals([]); // limpa seleção ao entrar
+      setGoals(saved ? JSON.parse(saved) : []);
+      setSelectedGoals([]);
     } catch (err) {
       console.log("Erro ao carregar metas:", err);
     }
   };
 
-  // Marca / desmarca uma meta
+  // ☑️ Selecionar meta
   const toggleSelectGoal = (index: number) => {
-    setSelectedGoals((prev) => {
-      if (prev.includes(index)) {
-        return prev.filter((i) => i !== index);
-      }
-      return [...prev, index];
-    });
+    setSelectedGoals((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+    );
   };
 
-  // Abrir detalhes da meta
-  const handleOpenGoal = (goal: Goal, index: number) => {
+  // 🏆 Verificar se meta foi batida
+  const checkAndRegisterCompletedGoal = async (
+    goal: Goal,
+    index: number
+  ) => {
+    if (goal.concluida) return;
+    if (!goal.valor_total || !goal.valor_atual) return;
+
+    const total = Number(goal.valor_total);
+    const atual = Number(goal.valor_atual);
+
+    if (atual >= total) {
+      const updatedGoals = [...goals];
+      updatedGoals[index] = {
+        ...goal,
+        concluida: true,
+      };
+
+      setGoals(updatedGoals);
+
+      const storageKey = getGoalsStorageKey();
+      await AsyncStorage.setItem(storageKey, JSON.stringify(updatedGoals));
+
+      updateStats({
+        metasFinanceirasBatidas: stats.metasFinanceirasBatidas + 1,
+      });
+    }
+  };
+
+  // 🔍 Abrir detalhes da meta
+  const handleOpenGoal = async (goal: Goal, index: number) => {
+    await checkAndRegisterCompletedGoal(goal, index);
+
     router.push({
       pathname: "/goal_detail",
       params: {
@@ -87,7 +111,7 @@ export default function GoalsScreen() {
     });
   };
 
-  // Excluir metas selecionadas
+  // 🗑️ Excluir metas
   const handleDeleteSelected = () => {
     if (selectedGoals.length === 0) {
       Alert.alert("Nenhuma meta selecionada", "Selecione uma meta para excluir.");
@@ -123,34 +147,36 @@ export default function GoalsScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={["top", "left", "right", "bottom"]}
-    >
-      {/* Header com título e lixeira */}
+    <SafeAreaView style={styles.container}>
+      {/* HEADER */}
       <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>Minhas Metas</Text>
-
         <TouchableOpacity onPress={handleDeleteSelected}>
           <Ionicons name="trash-outline" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
-        {/* Card para adicionar nova meta */}
+        {/* ➕ NOVA META */}
         <Link href="/newgoals" asChild>
           <TouchableOpacity style={styles.addButtonContainer}>
             <Text style={styles.addButtonText}>+</Text>
           </TouchableOpacity>
         </Link>
 
-        {/* Lista de metas */}
+        {/* 📋 LISTA DE METAS */}
         {goals.map((goal, index) => {
           const isSelected = selectedGoals.includes(index);
 
           return (
-            <View key={index} style={styles.goalCard}>
-              {/* Quadradinho de seleção no cantinho */}
+            <View
+              key={index}
+              style={[
+                styles.goalCard,
+                goal.concluida && styles.goalCompleted,
+              ]}
+            >
+              {/* Checkbox */}
               <TouchableOpacity
                 style={[
                   styles.checkbox,
@@ -161,13 +187,16 @@ export default function GoalsScreen() {
                 {isSelected && <View style={styles.checkboxDot} />}
               </TouchableOpacity>
 
-              {/* Área que abre os detalhes da meta */}
+              {/* Conteúdo */}
               <TouchableOpacity
                 style={styles.goalContent}
                 onPress={() => handleOpenGoal(goal, index)}
                 activeOpacity={0.8}
               >
                 <Text style={styles.goalText}>{goal.titulo}</Text>
+                {goal.concluida && (
+                  <Text style={styles.completedText}>Meta concluída 🎉</Text>
+                )}
               </TouchableOpacity>
             </View>
           );
@@ -211,17 +240,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
     elevation: 6,
   },
 
   addButtonText: {
     fontSize: 55,
     color: "#FFFFFF",
-    marginTop: -4,
   },
 
   goalCard: {
@@ -232,12 +256,12 @@ const styles = StyleSheet.create({
     padding: 10,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 4,
-    elevation: 4,
     position: "relative",
+  },
+
+  goalCompleted: {
+    borderWidth: 2,
+    borderColor: "#4CAF50",
   },
 
   goalContent: {
@@ -254,6 +278,13 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
+  completedText: {
+    color: "#4CAF50",
+    fontSize: 12,
+    marginTop: 6,
+    fontWeight: "bold",
+  },
+
   checkbox: {
     position: "absolute",
     top: 6,
@@ -265,7 +296,6 @@ const styles = StyleSheet.create({
     borderColor: "#CCCCCC",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "transparent",
   },
 
   checkboxSelected: {

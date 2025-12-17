@@ -1,6 +1,9 @@
 // context/StatsContext.tsx
 // @ts-nocheck
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const STORAGE_KEY = "@user_stats";
 
 const defaultStats = {
   totalRegistrosDespesas: 0,
@@ -29,18 +32,29 @@ const defaultStats = {
 
 const StatsContext = createContext({
   stats: defaultStats,
-  updateStats: (_partial) => {},
+  updateStats: (_partial: any) => {},
 });
 
 export function StatsProvider({ children }) {
   const [stats, setStats] = useState(defaultStats);
 
-  function updateStats(partial) {
-    setStats((prev) => ({
-      ...prev,
-      ...partial,
-    }));
-  }
+  /* 🔥 CARREGAR STATS DO STORAGE */
+  useEffect(() => {
+    const loadStats = async () => {
+      const saved = await AsyncStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        setStats(JSON.parse(saved));
+      }
+    };
+    loadStats();
+  }, []);
+
+  /* 💾 ATUALIZAR + SALVAR */
+  const updateStats = async (partial) => {
+    const updated = { ...stats, ...partial };
+    setStats(updated);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  };
 
   return (
     <StatsContext.Provider value={{ stats, updateStats }}>

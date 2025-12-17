@@ -1,82 +1,126 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+// app/(tabs)/_layout.tsx
 // @ts-nocheck
-import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import CenterFab from '@/components/ui/center-fab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Tabs, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { TouchableOpacity, View, StyleSheet } from "react-native";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const router = useRouter();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color="#ffff" />,
+    <>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: {
+            backgroundColor: "#111",
+            borderTopWidth: 0,
+            height: 70,
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+          },
         }}
-      />
-      <Tabs.Screen
-  name="achievements"
-  options={{
-    title: 'Conquistas',
-    tabBarIcon: () => (
-      <Ionicons name="trophy" size={28} color="#FFB800" />
-    ),
-  }}
-    />
-      <Tabs.Screen
-        name="report"
-        options={{
-          title: 'Relatórios',
-          tabBarIcon: ({ color }) => <Ionicons name="bar-chart" size={28} color={color} />,
-          // show a custom centered FAB inside the tab bar
-          tabBarButton: (props) => <CenterFab {...props} />,
-        }}
-      />
-      <Tabs.Screen
-        name="goals"
-        options={{
-          title: 'Metas',
-          tabBarIcon: ({ color }) => <Ionicons name="flag" size={28} color="#0D9AFE" />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Configurações',
-          tabBarIcon: ({ color }) => <Ionicons name="settings" size={28} color={color} />,
-        }}
-      />
-      {/* Telas de autenticação (ocultas da barra de abas) */}
-      <Tabs.Screen
-        name="index"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="register"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="forgot_password"
-        options={{
-          href: null,
-        }}
-      />
-    </Tabs>
+      >
+        {/* HOME */}
+        <Tabs.Screen
+          name="home"
+          options={{
+            title: "Home",
+            tabBarIcon: ({ size, focused }) => (
+              <Ionicons
+                name="home"
+                size={size}
+                color={focused ? "#2ecc71" : "#aaa"}
+              />
+            ),
+            tabBarLabelStyle: { color: "#2ecc71" },
+          }}
+        />
+
+        {/* CONQUISTAS */}
+        <Tabs.Screen
+          name="achievements"
+          options={{
+            title: "Conquistas",
+            tabBarItemStyle: { marginRight: 18 },
+            tabBarIcon: ({ size, focused }) => (
+              <Ionicons
+                name="trophy"
+                size={size}
+                color={focused ? "#FFD700" : "#aaa"}
+              />
+            ),
+          }}
+        />
+
+        {/* REPORT ESCONDIDO */}
+        <Tabs.Screen
+          name="report"
+          options={{
+            href: null,
+          }}
+        />
+
+        {/* METAS */}
+        <Tabs.Screen
+          name="goals"
+          options={{
+            title: "Metas",
+            tabBarItemStyle: { marginLeft: 18 },
+            tabBarIcon: ({ size, focused }) => (
+              <Ionicons
+                name="flag"
+                size={size}
+                color={focused ? "#1e90ff" : "#aaa"}
+              />
+            ),
+          }}
+        />
+
+        {/* CONFIG */}
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: "Config",
+            tabBarIcon: ({ size, focused }) => (
+              <Ionicons
+                name="settings"
+                size={size}
+                color={focused ? "#fff" : "#aaa"}
+              />
+            ),
+          }}
+        />
+      </Tabs>
+
+      {/* BOTÃO + */}
+      <View style={styles.fabContainer}>
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => router.push("/(tabs)/home?create=1")}
+        >
+          <Ionicons name="add" size={36} color="#000" />
+        </TouchableOpacity>
+      </View>
+    </>
   );
 }
+
+const styles = StyleSheet.create({
+  fabContainer: {
+    position: "absolute",
+    bottom: 28,
+    alignSelf: "center",
+    zIndex: 50,
+  },
+  fab: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#2ecc71",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 12,
+  },
+});

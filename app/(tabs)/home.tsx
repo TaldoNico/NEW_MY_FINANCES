@@ -7,39 +7,118 @@ import { useEffect, useState } from "react";
 import {
   FlatList,
   Modal,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
+
+import { db } from "@/services/firebase";
+import { useAuth } from "@/context/AuthContext";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+} from "firebase/firestore";
 
 export default function Home() {
   const router = useRouter();
   const { create } = useLocalSearchParams();
+  const { user, loading } = useAuth();
 
-  const [viewMode, setViewMode] = useState("grid");
   const [reports, setReports] = useState([]);
-
-  const [editModal, setEditModal] = useState(false);
-  const [selectedReport, setSelectedReport] = useState(null);
-
-  const [confirmDeleteModal, setConfirmDeleteModal] = useState(false);
-
-  const [newName, setNewName] = useState("");
-  const [newColor, setNewColor] = useState("#FF6B6B");
 
   const [createModal, setCreateModal] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createColor, setCreateColor] = useState("#4ECDC4");
 
+  // 🔹 SELEÇÃO
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedReports, setSelectedReports] = useState<string[]>([]);
+
+  /* 🔐 PROTEÇÃO */
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace("/index");
+    }
+  }, [loading, user]);
+
+  /* ➕ ABRIR MODAL PELO + */
   useEffect(() => {
     if (create === "1") {
       setCreateModal(true);
       router.replace("/(tabs)/home");
     }
   }, [create]);
+
+  /* 🔥 LISTENER FIRESTORE */
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, "users", user.uid, "reports"),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      setReports(
+        snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }))
+      );
+    });
+
+    return () => unsub();
+  }, [user]);
+
+  if (loading || !user) {
+    return <View style={{ flex: 1, backgroundColor: "#111" }} />;
+  }
+
+  /* ☑️ SELECIONAR */
+  const toggleSelect = (id: string) => {
+    setSelectedReports((prev) =>
+      prev.includes(id)
+        ? prev.filter((i) => i !== id)
+        : [...prev, id]
+    );
+  };
+
+  /* 🗑️ EXCLUIR */
+  const deleteSelected = () => {
+    Alert.alert(
+      "Excluir relatórios",
+      `Deseja excluir ${selectedReports.length} relatório(s)?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              for (const id of selectedReports) {
+                await deleteDoc(
+                  doc(db, "users", user.uid, "reports", id)
+                );
+              }
+
+              setSelectedReports([]);
+              setSelectionMode(false);
+            } catch (err) {
+              console.log("Erro ao excluir:", err);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const colors = [
     "#E63946",
@@ -53,70 +132,24 @@ export default function Home() {
     "#577590",
   ];
 
-  const toggleView = () => {
-    setViewMode((prev) => (prev === "grid" ? "list" : "grid"));
-  };
-
-  const openEdit = (report: any) => {
-    setSelectedReport(report);
-    setNewName(report.name);
-    setNewColor(report.color);
-    setEditModal(true);
-  };
-
-  const saveEdit = () => {
-    setReports((prev) =>
-      prev.map((r: any) =>
-        r.id === selectedReport?.id
-          ? { ...r, name: newName || r.name, color: newColor }
-          : r
-      )
-    );
-    setEditModal(false);
-  };
-
-  const confirmDelete = () => {
-    setConfirmDeleteModal(true);
-  };
-
-  const deleteReport = async () => {
-    setReports((prev) => prev.filter((r) => r.id !== selectedReport.id));
-    await AsyncStorage.removeItem(`transactions_${selectedReport.id}`);
-    setConfirmDeleteModal(false);
-    setEditModal(false);
-  };
-
-  /* ==============================
-     ✅ CRIAR RELATÓRIO (CORRIGIDO)
-  ============================== */
   const saveCreate = async () => {
     const name = createName.trim() || "Seu Relatório";
-    const id = Date.now().toString();
     const date = new Date();
-    const month = date.toLocaleString("pt-BR", { month: "short" });
-    const year = date.getFullYear();
 
-    const report = {
-      id,
-      name,
-      color: createColor,
-      progress: 0,
-      date: `${month} ${year}`,
-    };
-
-    // 🔥 cria storage exclusivo
-    await AsyncStorage.setItem(
-      `transactions_${id}`,
-      JSON.stringify([])
+    const ref = await addDoc(
+      collection(db, "users", user.uid, "reports"),
+      {
+        name,
+        color: createColor,
+        date: date.toLocaleDateString("pt-BR", {
+          month: "short",
+          year: "numeric",
+        }),
+        createdAt: new Date(),
+      }
     );
 
-    // 🔥 define relatório ativo
-    await AsyncStorage.setItem(
-      "@active_report_id",
-      id
-    );
-
-    setReports((prev) => [report, ...prev]);
+    await AsyncStorage.setItem("@active_report_id", ref.id);
 
     setCreateModal(false);
     setCreateName("");
@@ -125,94 +158,63 @@ export default function Home() {
     router.push("/(tabs)/report");
   };
 
-  /* ==============================
-     ✅ ABRIR RELATÓRIO EXISTENTE
-  ============================== */
-  const handleReportPress = async (report: any) => {
-    await AsyncStorage.setItem(
-      "@active_report_id",
-      report.id
-    );
-
-    router.push("/(tabs)/report");
-  };
-
-  const renderItem = ({ item }: any) => {
-    if (viewMode === "grid") {
-      return (
-        <TouchableOpacity
-          style={[styles.reportCardGrid, { backgroundColor: item.color }]}
-          onPress={() => handleReportPress(item)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.reportHeader}>
-            <Text style={styles.reportName}>{item.name}</Text>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => openEdit(item)}
-            >
-              <Ionicons name="pencil" size={18} color="#fff" />
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.dateText}>{item.date}</Text>
-        </TouchableOpacity>
-      );
-    }
-
-    return (
-      <TouchableOpacity
-        style={styles.reportCardList}
-        onPress={() => handleReportPress(item)}
-      >
-        <View
-          style={[styles.listColorIndicator, { backgroundColor: item.color }]}
-        />
-        <View style={styles.listContent}>
-          <Text style={styles.listTitle}>{item.name}</Text>
-          <Text style={styles.listDate}>{item.date}</Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   return (
     <View style={styles.container}>
       {/* HEADER */}
-      <View style={[styles.header, { marginTop: 50 }]}>
+      <View style={styles.header}>
         <Text style={styles.headerTitle}>Home</Text>
-        <TouchableOpacity onPress={toggleView} style={styles.iconButton}>
-          <Ionicons
-            name={viewMode === "grid" ? "list" : "grid"}
-            size={24}
-            color="#fff"
-          />
-        </TouchableOpacity>
+
+        {selectionMode && (
+          <TouchableOpacity onPress={deleteSelected}>
+            <Ionicons name="trash" size={26} color="#ff4d4d" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* LISTAGEM */}
-      {reports.length > 0 ? (
-        <FlatList
-          data={reports}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          numColumns={viewMode === "grid" ? 2 : 1}
-          key={viewMode}
-          contentContainerStyle={styles.list}
-        />
-      ) : (
-        <ScrollView contentContainerStyle={styles.emptyContainer}>
-          <Ionicons name="document-outline" size={80} color="#666" />
-          <Text style={styles.emptyText}>
-            Infelizmente não há nenhum relatório disponível...
-          </Text>
-          <Text style={styles.emptySubtext}>
-            Toque no + para criar um relatório
-          </Text>
-        </ScrollView>
-      )}
+      <FlatList
+        data={reports}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        contentContainerStyle={styles.list}
+        renderItem={({ item }) => {
+          const selected = selectedReports.includes(item.id);
 
-      {/* CREATE MODAL */}
+          return (
+            <TouchableOpacity
+              style={[
+                styles.reportCard,
+                { backgroundColor: item.color },
+              ]}
+              onLongPress={() => {
+                setSelectionMode(true);
+                toggleSelect(item.id);
+              }}
+              onPress={() => {
+                if (selectionMode) {
+                  toggleSelect(item.id);
+                } else {
+                  AsyncStorage.setItem("@active_report_id", item.id);
+                  router.push("/(tabs)/report");
+                }
+              }}
+            >
+              {selectionMode && (
+                <Ionicons
+                  name={selected ? "checkbox" : "square-outline"}
+                  size={22}
+                  color="#fff"
+                  style={styles.checkbox}
+                />
+              )}
+
+              <Text style={styles.reportName}>{item.name}</Text>
+              <Text style={styles.reportDate}>{item.date}</Text>
+            </TouchableOpacity>
+          );
+        }}
+      />
+
+      {/* MODAL CRIAR RELATÓRIO */}
       <Modal visible={createModal} transparent animationType="fade">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -226,7 +228,6 @@ export default function Home() {
               onChangeText={setCreateName}
             />
 
-            <Text style={styles.colorLabel}>Escolha uma cor:</Text>
             <View style={styles.colorPalette}>
               {colors.map((c) => (
                 <TouchableOpacity
@@ -236,8 +237,7 @@ export default function Home() {
                     {
                       backgroundColor: c,
                       borderWidth: createColor === c ? 3 : 1,
-                      borderColor:
-                        createColor === c ? "#fff" : "#555",
+                      borderColor: "#fff",
                     },
                   ]}
                   onPress={() => setCreateColor(c)}
@@ -245,21 +245,9 @@ export default function Home() {
               ))}
             </View>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.btn, { backgroundColor: "#4ECDC4" }]}
-                onPress={saveCreate}
-              >
-                <Text style={styles.btnText}>Criar</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.btn, { backgroundColor: "#666" }]}
-                onPress={() => setCreateModal(false)}
-              >
-                <Text style={styles.btnText}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={styles.createBtn} onPress={saveCreate}>
+              <Text style={styles.createText}>Criar</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -267,89 +255,70 @@ export default function Home() {
   );
 }
 
-/* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#121212" },
+  container: { flex: 1, backgroundColor: "#111" },
   header: {
+    paddingTop: 50,
+    padding: 20,
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    backgroundColor: "#1a1a1a",
+    alignItems: "center",
   },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
-  iconButton: { padding: 8, backgroundColor: "#2b2b2b", borderRadius: 8 },
-  list: { paddingHorizontal: 16, paddingBottom: 100 },
-  reportCardGrid: {
-    borderRadius: 12,
-    padding: 16,
-    width: "48%",
-    marginBottom: 16,
-  },
-  reportHeader: { flexDirection: "row", justifyContent: "space-between" },
-  reportName: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  editButton: {
-    padding: 6,
-    backgroundColor: "rgba(0,0,0,0.2)",
-    borderRadius: 6,
-  },
-  dateText: { color: "rgba(255,255,255,0.7)", fontSize: 12 },
-  reportCardList: {
-    flexDirection: "row",
-    backgroundColor: "#1e1e1e",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  listColorIndicator: {
-    width: 6,
-    height: 60,
-    borderRadius: 3,
-    marginRight: 12,
-  },
-  listContent: { flex: 1 },
-  listTitle: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  listDate: { color: "#888", fontSize: 12 },
-  emptyContainer: {
+  headerTitle: { color: "#fff", fontSize: 26, fontWeight: "bold" },
+
+  list: { padding: 10 },
+
+  reportCard: {
     flex: 1,
+    margin: 8,
+    borderRadius: 16,
+    padding: 16,
+    position: "relative",
+  },
+  checkbox: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+  },
+  reportName: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  reportDate: { color: "#eee", marginTop: 8 },
+
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
   },
-  emptyText: { color: "#fff", fontSize: 18, marginTop: 16 },
-  emptySubtext: { color: "#888", marginTop: 8 },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.8)",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-  },
   modalContent: {
-    backgroundColor: "#1e1e1e",
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: "#222",
+    padding: 20,
+    borderRadius: 20,
+    width: "85%",
   },
-  modalTitle: { color: "#fff", fontSize: 20, marginBottom: 20 },
+  modalTitle: { color: "#fff", fontSize: 20, marginBottom: 12 },
   input: {
-    backgroundColor: "#2b2b2b",
-    borderRadius: 10,
+    backgroundColor: "#333",
     color: "#fff",
+    borderRadius: 10,
     padding: 12,
-    marginBottom: 20,
+    marginBottom: 12,
   },
-  colorLabel: { color: "#fff", marginBottom: 12 },
   colorPalette: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 10,
+    marginBottom: 16,
   },
-  colorCircle: { width: 40, height: 40, borderRadius: 20 },
-  modalButtons: { flexDirection: "row", gap: 12 },
-  btn: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 10,
+  colorCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    margin: 6,
+  },
+  createBtn: {
+    backgroundColor: "#4ECDC4",
+    padding: 14,
+    borderRadius: 12,
     alignItems: "center",
   },
-  btnText: { color: "#fff", fontWeight: "bold" },
+  createText: { color: "#000", fontWeight: "bold" },
 });

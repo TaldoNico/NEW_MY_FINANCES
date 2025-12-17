@@ -1,7 +1,4 @@
-// app/(tabs)/settings.tsx
 // @ts-nocheck
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import React from "react";
 import {
   Alert,
@@ -11,9 +8,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { signOut } from "firebase/auth";
-import { auth } from "../../services/firebase";
+import { auth } from "@/services/firebase";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -30,10 +28,9 @@ export default function SettingsScreen() {
           onPress: async () => {
             try {
               await signOut(auth);
-              // volta para a tela de login SEM deixar as tabs no histórico
               router.replace("/");
             } catch (err) {
-              console.log("Erro ao encerrar sessão:", err);
+              console.log("Erro ao sair:", err);
             }
           },
         },
@@ -44,80 +41,65 @@ export default function SettingsScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.card}>
-        {/* Botão voltar */}
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={24} color="#fff" />
-        </TouchableOpacity>
-
         <Text style={styles.title}>Configurações</Text>
 
-        {/* Imagem / gráfico fake */}
-        <View style={styles.chartFake} />
-
-        {/* Botão PERFIL */}
+        {/* PERFIL */}
         <TouchableOpacity
           style={styles.option}
           onPress={() => router.push("/profile")}
         >
           <View style={styles.optionLeft}>
-            <Ionicons name="person-circle-outline" size={24} color="#fff" />
-            <Text style={styles.optionText}>PERFIL</Text>
+            <Ionicons name="person-circle-outline" size={26} color="#fff" />
+            <Text style={styles.optionText}>Perfil</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#fff" />
+          <Ionicons name="chevron-forward" size={20} color="#aaa" />
         </TouchableOpacity>
 
-        {/* Botão MINHAS METAS */}
+        {/* MINHAS METAS */}
         <TouchableOpacity
           style={styles.option}
           onPress={() => router.push("/(tabs)/goals")}
         >
           <View style={styles.optionLeft}>
-            <Ionicons name="flag" size={24} color="#1e90ff" />
-            <Text style={styles.optionText}>MINHAS METAS</Text>
+            <Ionicons name="flag" size={22} color="#1e90ff" />
+            <Text style={styles.optionText}>Minhas Metas</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#fff" />
+          <Ionicons name="chevron-forward" size={20} color="#aaa" />
         </TouchableOpacity>
 
-        {/* Botão MINHAS CONQUISTAS */}
+        {/* MINHAS CONQUISTAS */}
         <TouchableOpacity
           style={styles.option}
           onPress={() => router.push("/(tabs)/achievements")}
         >
           <View style={styles.optionLeft}>
-            <Ionicons name="trophy" size={24} color="#ffbf00" />
-            <Text style={styles.optionText}>MINHAS CONQUISTAS</Text>
+            <Ionicons name="trophy" size={22} color="#FFD700" />
+            <Text style={styles.optionText}>Minhas Conquistas</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#fff" />
+          <Ionicons name="chevron-forward" size={20} color="#aaa" />
         </TouchableOpacity>
 
-        {/* Botão SOBRE */}
+        {/* SOBRE */}
         <TouchableOpacity
           style={styles.option}
           onPress={() => router.push("/about_us")}
         >
           <View style={styles.optionLeft}>
-            <Ionicons
-              name="information-circle"
-              size={24}
-              color="#ffffffff"
-            />
-            <Text style={styles.optionText}>SOBRE</Text>
+            <Ionicons name="information-circle-outline" size={22} color="#fff" />
+            <Text style={styles.optionText}>Sobre</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#fff" />
+          <Ionicons name="chevron-forward" size={20} color="#aaa" />
         </TouchableOpacity>
 
-        {/* Botão ENCERRAR SESSÃO */}
+        {/* ENCERRAR SESSÃO */}
         <TouchableOpacity
-          style={[styles.option, styles.logoutOption]}
+          style={[styles.option, styles.logout]}
           onPress={handleLogout}
         >
           <View style={styles.optionLeft}>
-            <Ionicons name="log-out-outline" size={24} color="#ff4d4d" />
+            <Ionicons name="log-out-outline" size={22} color="#ff4d4d" />
             <Text style={[styles.optionText, { color: "#ff4d4d" }]}>
-              ENCERRAR SESSÃO
+              Encerrar Sessão
             </Text>
           </View>
         </TouchableOpacity>
@@ -142,50 +124,37 @@ const styles = StyleSheet.create({
     padding: 24,
     width: "90%",
   },
-  backButton: {
-    marginBottom: 8,
-    padding: 4,
-    width: 32,
-  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#fff",
     textAlign: "center",
-    marginBottom: 24,
-  },
-  chartFake: {
-    width: 180,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#444",
-    alignSelf: "center",
-    marginBottom: 32,
+    marginBottom: 30,
   },
   option: {
     backgroundColor: "#1e1e1e",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    marginBottom: 12,
+    marginBottom: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  logoutOption: {
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: "#ff4d4d55",
-  },
   optionLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
   },
   optionText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
+  },
+  logout: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#ff4d4d55",
   },
   version: {
     marginTop: 24,

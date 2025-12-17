@@ -1,4 +1,4 @@
-// Arquivo: app/goal_detail.tsx
+// app/goal_detail.tsx
 // @ts-nocheck
 
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -16,317 +16,178 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../services/firebase";
+import { useStats } from "@/context/StatsContext";
 
 const getGoalsStorageKey = () => {
   const user = auth.currentUser;
-  if (!user) {
-    return "goals_guest";
-  }
+  if (!user) return "goals_guest";
   return `goals_${user.uid}`;
 };
 
 export default function GoalDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { stats, updateStats } = useStats();
 
-  const indexParam = Array.isArray(params.index)
-    ? params.index[0]
-    : params.index;
-  const index = Number(indexParam);
+  const index = Number(
+    Array.isArray(params.index) ? params.index[0] : params.index
+  );
 
-  // ESTADOS EDITÁVEIS
-  const [title, setTitle] = useState(
-    params.titulo ? String(params.titulo) : ""
-  );
-  const [totalValue, setTotalValue] = useState(
-    params.valor_total ? String(params.valor_total) : ""
-  );
-  const [deadline, setDeadline] = useState(
-    params.prazo ? String(params.prazo) : ""
-  );
-  const [description, setDescription] = useState(
-    params.descricao ? String(params.descricao) : ""
-  );
+  const [title, setTitle] = useState(String(params.titulo || ""));
+  const [totalValue, setTotalValue] = useState(String(params.valor_total || ""));
+  const [deadline, setDeadline] = useState(String(params.prazo || ""));
+  const [description, setDescription] = useState(String(params.descricao || ""));
   const [currentValue, setCurrentValue] = useState(
-    params.valor_atual ? String(params.valor_atual) : "0"
+    String(params.valor_atual || "0")
   );
   const [amountToAdd, setAmountToAdd] = useState("");
-  const [movements, setMovements] = useState<any[]>([]); // histórico
+  const [movements, setMovements] = useState<any[]>([]);
 
-  // carregar histórico da meta ao abrir
   useEffect(() => {
     const loadMovements = async () => {
-      try {
-        const storageKey = getGoalsStorageKey();
-        const saved = await AsyncStorage.getItem(storageKey);
-        const goals = saved ? JSON.parse(saved) : [];
-
-        if (
-          Array.isArray(goals) &&
-          goals[index] &&
-          Array.isArray(goals[index].movimentos)
-        ) {
-          setMovements(goals[index].movimentos);
-        }
-      } catch (err) {
-        console.log("Erro ao carregar movimentos:", err);
+      const saved = await AsyncStorage.getItem(getGoalsStorageKey());
+      const goals = saved ? JSON.parse(saved) : [];
+      if (goals[index]?.movimentos) {
+        setMovements(goals[index].movimentos);
       }
     };
-
-    if (!isNaN(index) && index >= 0) {
-      loadMovements();
-    }
+    if (!isNaN(index)) loadMovements();
   }, [index]);
 
-  // cálculo de progresso
-  const totalNumber = Number(
-    String(totalValue || "0").replace(",", ".")
-  );
-  const currentNumber = Number(
-    String(currentValue || "0").replace(",", ".")
-  );
+  const totalNumber = Number(totalValue.replace(",", "."));
+  const currentNumber = Number(currentValue.replace(",", "."));
+  const progress =
+    totalNumber > 0
+      ? Math.min(100, Math.max(0, (currentNumber / totalNumber) * 100))
+      : 0;
 
-  const hasTotal = totalNumber > 0;
-  const rawProgress = hasTotal ? (currentNumber / totalNumber) * 100 : 0;
-  const progress = Math.max(0, Math.min(100, rawProgress)); // 0–100
-
-  const progressText = hasTotal
-    ? `${progress.toFixed(1).replace(".", ",")}% concluído`
-    : "Defina o valor total para ver o progresso";
-
-  // SALVAR ALTERAÇÕES DA META (título, total, prazo, descrição)
   const handleSaveMeta = async () => {
     if (!title.trim()) {
-      Alert.alert("Atenção", "O nome da meta não pode ficar vazio.");
+      Alert.alert("Erro", "O título não pode ficar vazio.");
       return;
     }
 
-    // Se tiver valor total preenchido, tenta validar
-    if (totalValue.trim()) {
-      const n = Number(totalValue.replace(",", "."));
-      if (isNaN(n) || n <= 0) {
-        Alert.alert("Erro", "Valor total inválido.");
-        return;
-      }
-    }
+    const saved = await AsyncStorage.getItem(getGoalsStorageKey());
+    const goals = saved ? JSON.parse(saved) : [];
 
-    try {
-      const storageKey = getGoalsStorageKey();
-      const saved = await AsyncStorage.getItem(storageKey);
-      const goals = saved ? JSON.parse(saved) : [];
+    if (!goals[index]) return;
 
-      if (!Array.isArray(goals) || !goals[index]) {
-        Alert.alert("Erro", "Não foi possível atualizar essa meta.");
-        return;
-      }
-
-      goals[index].titulo = title;
-      goals[index].valor_total = totalValue;
-      goals[index].prazo = deadline;
-      goals[index].descricao = description;
-
-      await AsyncStorage.setItem(storageKey, JSON.stringify(goals));
-
-      Alert.alert("Sucesso", "Meta atualizada com sucesso!");
-    } catch (err) {
-      console.log("Erro ao salvar meta:", err);
-      Alert.alert("Erro", "Não foi possível salvar as alterações.");
-    }
-  };
-
-  // ADICIONAR VALOR NA META
-  const handleAddValue = async () => {
-    if (isNaN(index) || index < 0) {
-      Alert.alert("Erro", "Meta inválida.");
-      return;
-    }
-
-    if (!amountToAdd.trim()) {
-      Alert.alert("Atenção", "Digite um valor para adicionar.");
-      return;
-    }
-
-    const addNumber = Number(amountToAdd.replace(",", "."));
-    const currentNumberLocal = Number(
-      String(currentValue || "0").replace(",", ".")
-    );
-
-    if (isNaN(addNumber)) {
-      Alert.alert("Erro", "Valor para adicionar inválido.");
-      return;
-    }
-
-    const newValueNumber = currentNumberLocal + addNumber;
-    const newValueString = String(newValueNumber);
-
-    const movement = {
-      valor: String(addNumber),
-      data: new Date().toISOString(),
+    goals[index] = {
+      ...goals[index],
+      titulo: title,
+      valor_total: totalValue,
+      prazo: deadline,
+      descricao: description,
     };
 
-    try {
-      const storageKey = getGoalsStorageKey();
-      const saved = await AsyncStorage.getItem(storageKey);
-      const goals = saved ? JSON.parse(saved) : [];
-
-      if (!Array.isArray(goals) || !goals[index]) {
-        Alert.alert("Erro", "Não foi possível atualizar essa meta.");
-        return;
-      }
-
-      // Atualiza o valor_atual da meta
-      goals[index].valor_atual = newValueString;
-
-      // Garante que existe o array de movimentos
-      if (!Array.isArray(goals[index].movimentos)) {
-        goals[index].movimentos = [];
-      }
-
-      // Adiciona o novo movimento
-      goals[index].movimentos.push(movement);
-
-      await AsyncStorage.setItem(storageKey, JSON.stringify(goals));
-
-      // Atualiza na tela
-      setCurrentValue(newValueString);
-      setAmountToAdd("");
-      setMovements((prev) => [...prev, movement]);
-    } catch (err) {
-      console.log("Erro ao atualizar meta:", err);
-      Alert.alert("Erro", "Não foi possível salvar o valor.");
-    }
+    await AsyncStorage.setItem(getGoalsStorageKey(), JSON.stringify(goals));
+    Alert.alert("Sucesso", "Meta atualizada.");
   };
 
-  // formata data em pt-BR
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return iso;
-    return d.toLocaleString("pt-BR");
+  const handleAddValue = async () => {
+    if (!amountToAdd.trim()) return;
+
+    const add = Number(amountToAdd.replace(",", "."));
+    if (isNaN(add)) return;
+
+    const newValue = currentNumber + add;
+
+    const saved = await AsyncStorage.getItem(getGoalsStorageKey());
+    const goals = saved ? JSON.parse(saved) : [];
+
+    if (!goals[index]) return;
+
+    const wasCompleted = currentNumber >= totalNumber;
+    const willComplete = newValue >= totalNumber && totalNumber > 0;
+
+    goals[index].valor_atual = String(newValue);
+    goals[index].movimentos = goals[index].movimentos || [];
+    goals[index].movimentos.push({
+      valor: String(add),
+      data: new Date().toISOString(),
+    });
+
+    await AsyncStorage.setItem(getGoalsStorageKey(), JSON.stringify(goals));
+
+    setCurrentValue(String(newValue));
+    setAmountToAdd("");
+    setMovements((prev) => [...prev, { valor: String(add), data: new Date().toISOString() }]);
+
+    if (!wasCompleted && willComplete) {
+      updateStats({
+        metasFinanceirasBatidas: stats.metasFinanceirasBatidas + 1,
+      });
+    }
   };
 
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={["top", "left", "right", "bottom"]}
-    >
+    <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Voltar */}
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#fff" />
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={26} color="#fff" />
         </TouchableOpacity>
 
         <Text style={styles.title}>{title || "Meta"}</Text>
 
-        {/* Card de informações principais (EDITÁVEIS) */}
         <View style={styles.card}>
-          <Text style={styles.label}>Título da meta</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ex: Comprar um computador"
-            placeholderTextColor="#777"
-            value={title}
-            onChangeText={setTitle}
-          />
+          <Text style={styles.label}>Título</Text>
+          <TextInput style={styles.input} value={title} onChangeText={setTitle} />
 
-          <Text style={styles.label}>Valor total da meta</Text>
+          <Text style={styles.label}>Valor total</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ex: 15000"
-            placeholderTextColor="#777"
             keyboardType="numeric"
             value={totalValue}
             onChangeText={setTotalValue}
           />
 
           <Text style={styles.label}>Prazo</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ex: 12/03/2026"
-            placeholderTextColor="#777"
-            value={deadline}
-            onChangeText={setDeadline}
-          />
+          <TextInput style={styles.input} value={deadline} onChangeText={setDeadline} />
 
           <Text style={styles.label}>Descrição</Text>
           <TextInput
-            style={[styles.input, { minHeight: 70, textAlignVertical: "top" }]}
-            placeholder="Escreva mais detalhes..."
-            placeholderTextColor="#777"
+            style={[styles.input, { height: 80 }]}
             multiline
             value={description}
             onChangeText={setDescription}
           />
 
-          <TouchableOpacity style={styles.saveMetaButton} onPress={handleSaveMeta}>
-            <Text style={styles.saveMetaButtonText}>Salvar alterações da meta</Text>
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSaveMeta}>
+            <Text style={styles.saveText}>Salvar meta</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Progresso da meta */}
         <View style={styles.progressCard}>
           <Text style={styles.label}>Progresso</Text>
-
-          {hasTotal ? (
-            <>
-              <Text style={styles.progressText}>
-                {`R$ ${currentNumber || 0} de R$ ${totalNumber}`}
-              </Text>
-              <View style={styles.progressBarBackground}>
-                <View
-                  style={[
-                    styles.progressBarFill,
-                    { width: `${progress}%` },
-                  ]}
-                />
-              </View>
-              <Text style={styles.progressPercent}>{progressText}</Text>
-            </>
-          ) : (
-            <Text style={styles.progressHint}>
-              Informe um valor total da meta para acompanhar o progresso.
-            </Text>
-          )}
+          <View style={styles.progressBg}>
+            <View style={[styles.progressFill, { width: `${progress}%` }]} />
+          </View>
+          <Text style={styles.progressText}>{progress.toFixed(1)}%</Text>
         </View>
 
-        {/* Área para adicionar valor */}
-        <View style={styles.addContainer}>
-          <Text style={styles.label}>Adicionar valor na meta</Text>
-
+        <View style={styles.addCard}>
+          <Text style={styles.label}>Adicionar valor</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ex: 200"
-            placeholderTextColor="#777"
             keyboardType="numeric"
             value={amountToAdd}
             onChangeText={setAmountToAdd}
           />
-
-          <TouchableOpacity style={styles.addButton} onPress={handleAddValue}>
-            <Text style={styles.addButtonText}>Adicionar</Text>
+          <TouchableOpacity style={styles.addBtn} onPress={handleAddValue}>
+            <Text style={styles.addText}>Adicionar</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Histórico de movimentações */}
-        <View style={styles.historyContainer}>
-          <Text style={styles.label}>Histórico de movimentações</Text>
-
-          {movements.length === 0 ? (
-            <Text style={styles.historyEmpty}>
-              Nenhum valor adicionado ainda.
-            </Text>
-          ) : (
-            [...movements]
-              .slice()
-              .reverse()
-              .map((mov, idx) => (
-                <View key={idx} style={styles.historyItem}>
-                  <Text style={styles.historyAmount}>+ R$ {mov.valor}</Text>
-                  <Text style={styles.historyDate}>
-                    {mov.data ? formatDate(mov.data) : ""}
-                  </Text>
-                </View>
-              ))
-          )}
+        <View style={styles.history}>
+          <Text style={styles.label}>Histórico</Text>
+          {movements
+            .slice()
+            .reverse()
+            .map((m, i) => (
+              <Text key={i} style={styles.historyItem}>
+                + R$ {m.valor}
+              </Text>
+            ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -334,134 +195,60 @@ export default function GoalDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1E1E1E",
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  backButton: {
-    width: 32,
-    marginBottom: 10,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 20,
-  },
-  card: {
-    backgroundColor: "#2A2A2A",
-    borderRadius: 16,
-    padding: 18,
-    gap: 10,
-  },
-  label: {
-    fontSize: 14,
-    color: "#aaa",
-    marginTop: 8,
-  },
-  value: {
-    fontSize: 16,
-    color: "#fff",
-    marginTop: 2,
-  },
+  container: { flex: 1, backgroundColor: "#1E1E1E" },
+  content: { padding: 20 },
+  title: { fontSize: 24, color: "#fff", fontWeight: "bold", marginVertical: 16 },
+  card: { backgroundColor: "#2A2A2A", padding: 16, borderRadius: 14 },
+  label: { color: "#aaa", marginTop: 10 },
   input: {
     backgroundColor: "#1E1E1E",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#444",
     color: "#fff",
+    borderRadius: 8,
     padding: 10,
     marginTop: 4,
   },
-  saveMetaButton: {
+  saveBtn: {
     backgroundColor: "#3B82F6",
-    marginTop: 14,
-    paddingVertical: 12,
+    marginTop: 16,
+    padding: 12,
     borderRadius: 10,
     alignItems: "center",
   },
-  saveMetaButtonText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "bold",
-  },
+  saveText: { color: "#fff", fontWeight: "bold" },
   progressCard: {
-    marginTop: 24,
     backgroundColor: "#2A2A2A",
-    borderRadius: 16,
-    padding: 18,
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 14,
   },
-  progressText: {
-    color: "#fff",
-    marginTop: 6,
-    marginBottom: 8,
-  },
-  progressBarBackground: {
-    width: "100%",
-    height: 14,
-    borderRadius: 999,
+  progressBg: {
+    height: 12,
     backgroundColor: "#444",
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: "100%",
     borderRadius: 999,
-    backgroundColor: "#4CAF50",
-  },
-  progressPercent: {
-    color: "#fff",
-    marginTop: 6,
-    fontWeight: "600",
-  },
-  progressHint: {
-    color: "#ccc",
+    overflow: "hidden",
     marginTop: 8,
   },
-  addContainer: {
-    marginTop: 24,
+  progressFill: { height: "100%", backgroundColor: "#4CAF50" },
+  progressText: { color: "#fff", marginTop: 6 },
+  addCard: {
     backgroundColor: "#2A2A2A",
-    borderRadius: 16,
-    padding: 18,
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 14,
   },
-  addButton: {
+  addBtn: {
     backgroundColor: "#4CAF50",
-    marginTop: 14,
-    paddingVertical: 12,
+    marginTop: 12,
+    padding: 12,
     borderRadius: 10,
     alignItems: "center",
   },
-  addButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  historyContainer: {
-    marginTop: 24,
+  addText: { color: "#fff", fontWeight: "bold" },
+  history: {
     backgroundColor: "#2A2A2A",
-    borderRadius: 16,
-    padding: 18,
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 14,
   },
-  historyEmpty: {
-    color: "#ccc",
-    marginTop: 8,
-  },
-  historyItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: "#3A3A3A",
-  },
-  historyAmount: {
-    color: "#4CAF50",
-    fontWeight: "600",
-  },
-  historyDate: {
-    color: "#ccc",
-    fontSize: 12,
-  },
+  historyItem: { color: "#4CAF50", marginTop: 6 },
 });
