@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
   },
 
   btnText: {
-    color: "#fff",
+    color: "#ddd8d8ff",
     fontWeight: "bold",
   },
 });
